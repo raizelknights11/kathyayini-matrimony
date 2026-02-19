@@ -6,6 +6,3 @@ target/
 
 # Ignore your synced images (Upload these manually or host elsewhere)
 images/
-
-# Ignore the generated output (Since Java creates it)
-index.html
