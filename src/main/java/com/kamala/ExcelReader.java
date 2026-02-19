@@ -14,7 +14,7 @@ import java.util.List;
 public class ExcelReader {
 
     private static final String EXCEL_URL = "https://docs.google.com/spreadsheets/d/1wvVlbvsqj7B21OK0ZjLMTt4Z03LDRWD_dXKFlxhBMKs/export?format=xlsx";
-    private static final String HTML_FILE_NAME = "view.html";
+    private static final String HTML_FILE_NAME = "index.html";
 
     public static void main(String[] args) {
         List<List<String>> data = readExcel(EXCEL_URL);

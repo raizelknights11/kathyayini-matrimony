@@ -8,4 +8,4 @@ target/
 images/
 
 # Ignore the generated output (Since Java creates it)
-view.html
+index.html
