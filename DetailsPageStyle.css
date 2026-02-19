@@ -1,0 +1,50 @@
+/* style.css */
+body { font-family: 'Segoe UI', sans-serif; background: #f4f4f9; margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
+header { background: #fff; padding: 20px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+header h1 { margin: 0; color: #333; font-size: 1.8em; }
+footer { background: #333; color: #fff; padding: 20px; text-align: center; margin-top: auto; font-size: 0.9em; }
+
+/* Connection Status */
+#connection-status { position: fixed; top: 10px; right: 10px; padding: 5px 12px; border-radius: 20px; font-size: 12px; z-index: 10000; font-weight: bold; }
+.online-dot { background: #4caf50; color: white; border: 2px solid #fff; }
+.offline-dot { background: #f44336; color: white; border: 2px solid #fff; }
+
+/* Filters & Stats */
+.stats-bar { display: flex; justify-content: center; gap: 10px; margin: 15px 0; font-weight: bold; flex-wrap: wrap; }
+.stat-item { padding: 8px 16px; border-radius: 20px; font-size: 0.85em; transition: all 0.2s; border: 1px solid transparent; }
+.stat-all { background: #eee; color: #333; border-color: #ccc; cursor: pointer; }
+.stat-groom { background: #e3f2fd; color: #1565C0; border-color: #2196F3; cursor: pointer; }
+.stat-bride { background: #f3e5f5; color: #6A1B9A; border-color: #9C27B0; cursor: pointer; }
+.active-filter { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.2); border-width: 2px; }
+
+/* Grid & Cards */
+.container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding: 20px; max-width: 1200px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+.card { background: white; padding: 20px; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.08); border-left: 6px solid #999; transition: transform 0.2s; display: flex; flex-direction: column; }
+.card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
+.card-groom { border-left-color: #2196F3; background: linear-gradient(to right, #f8fcff 0%, #ffffff 30%); }
+.card-bride { border-left-color: #9C27B0; background: linear-gradient(to right, #fdfaff 0%, #ffffff 30%); }
+.card h3 { margin: 0 0 8px 0; font-size: 1.2em; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card p { display: flex; align-items: center; gap: 8px; margin: 5px 0; line-height: 1.4; font-size: 0.95em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.material-symbols-outlined { font-size: 20px; color: #777; }
+
+/* Detail View */
+#detailView { display: none; background: white; max-width: 700px; margin: 20px auto; padding: 25px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); width: 90%; }
+.media-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px; }
+.detail-card-img { width: 100%; height: auto; aspect-ratio: 1/1; object-fit: contain; border-radius: 12px; background: #f8f9fa; cursor: zoom-in; }
+.row { display: flex; border-bottom: 1px solid #eee; padding: 12px 0; flex-wrap: wrap; }
+.label { font-weight: bold; width: 150px; color: #777; font-size: 0.8em; text-transform: uppercase; }
+.value { flex: 1; color: #333; min-width: 200px; }
+
+/* Modal */
+.modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.9); cursor: zoom-out; align-items: center; justify-content: center; }
+.modal-content { margin: auto; display: block; width: auto; height: auto; max-width: 95%; max-height: 95%; border-radius: 5px; box-shadow: 0 0 20px rgba(255,255,255,0.1); object-fit: contain; }
+.close-modal { position: absolute; top: 20px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; }
+
+/* Components */
+#search { display: block; margin: 0 auto 10px auto; padding: 15px; width: 90%; max-width: 500px; border-radius: 30px; border: 1px solid #ddd; outline: none; font-size: 16px; }
+.horoscope-btn { display: block; background: #673AB7; color: white; text-align: center; padding: 15px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 20px 0; }
+
+@media (max-width: 600px) {
+    header h1 { font-size: 1.4em; }
+    .label { width: 100%; margin-bottom: 4px; }
+}

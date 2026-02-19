@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrimony Directory</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" />
+    <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="DetailsPageStyle.css">
+</head>
+
+<body>
+
+<div id="connection-status"></div>
+
+<header>
+    <h1>Kamala Matrimony Directory</h1>
+</header>
+
+<div id="galleryPage">
+    <div style="padding: 20px 0 0 0;">
+        <input type="text" id="search" placeholder="Search name, education, or job..." onkeyup="search()">
+
+        <div class="stats-bar" id="statsBar">
+            <div class="stat-item stat-all active-filter" id="btnAll" onclick="filterType('all')">All</div>
+            <div class="stat-item stat-groom" id="btnGroom" onclick="filterType('groom')">Grooms: 0</div>
+            <div class="stat-item stat-bride" id="btnBride" onclick="filterType('bride')">Brides: 0</div>
+        </div>
+    </div>
+    <div class="container" id="cardContainer"></div>
+</div>
+
+<div id="detailView"></div>
+
+<div id="imgModal" class="modal" onclick="closeModal()">
+    <span class="close-modal">&times;</span>
+    <img class="modal-content" id="fullImg">
+</div>
+
+<footer>
+    <p>&copy; 2024 Kamala Matrimony | Confidential</p>
+</footer>
+
+<script>
+    const db = {{DATA_JSON}};
+    const PHOTO_INDICES = {{PHOTO_INDICES}};
+    const EXCLUDED_INDICES = {{EXCLUDED_INDICES}};
+    const HOROSCOPE_INDEX = {{HOROSCOPE_INDEX}};
+    const TYPE_INDEX = {{TYPE_INDEX}};
+    const cols = db[0];
+
+    const getColIndex = (name) => cols.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
+
+    let currentFilter = 'all';
+
+    // Connectivity Status Handler
+    function updateStatus() {
+        const statusDiv = document.getElementById('connection-status');
+        if (navigator.onLine) {
+            statusDiv.innerHTML = "● Online";
+            statusDiv.className = "online-dot";
+        } else {
+            statusDiv.innerHTML = "● Offline Mode";
+            statusDiv.className = "offline-dot";
+        }
+    }
+    window.addEventListener('online', updateStatus);
+    window.addEventListener('offline', updateStatus);
+    updateStatus();
+
+    function filterType(type) {
+        currentFilter = type;
+        document.querySelectorAll('.stat-item').forEach(el => el.classList.remove('active-filter'));
+        if(type === 'all') document.getElementById('btnAll').classList.add('active-filter');
+        else if(type === 'groom') document.getElementById('btnGroom').classList.add('active-filter');
+        else if(type === 'bride') document.getElementById('btnBride').classList.add('active-filter');
+        search();
+    }
+
+    function formatDate(dateStr) {
+    if (!dateStr || dateStr.length < 5) return "N/A";
+
+    const parts = dateStr.split(/[\/\-]/);
+    if (parts.length !== 3) return dateStr;
+
+    let month = parts[0].padStart(2, '0');
+    let day = parts[1].padStart(2, '0');
+    let year = parts[2];
+
+    if (year.length === 2) {
+        year = (parseInt(year) > 40 ? "19" : "20") + year;
+    }
+
+    return `${day}-${month}-${year}`;
+}
+
+    function initGallery() {
+    let container = document.getElementById('cardContainer');
+
+    // 1. Get the column indices (renamed to end with 'Idx' for clarity)
+    const nameIdx = getColIndex("Name");
+    const subCasteIdx = getColIndex("Sub Caste");
+    const eduIdx = getColIndex("Education"); // Added missing semicolon
+    const gothraIdx = getColIndex("Gothra");
+    const cityIdx = getColIndex("If currently not staying in Bengaluru Please mention the city");
+    const jobIdx = getColIndex("Currently Working-In(Company Name) and As(Position)");
+    const dobIdx = getColIndex("Date of birth");
+
+    let html = '';
+    let grooms = 0, brides = 0;
+
+    for (let i = 1; i < db.length; i++) {
+        let row = db[i];
+
+        // 2. Extract values using the indices
+        let name = row[nameIdx] || "No Name";
+        let subCasteVal = row[subCasteIdx] || "N/A";
+        let gothraVal = row[gothraIdx] || "N/A";
+        let eduVal = row[eduIdx] || "Unknown";
+        let jobVal = row[jobIdx] || "Not Specified";
+        let cityVal = row[cityIdx] || "Unknown";
+        let dobVal = row[dobIdx] || "Unknown";
+        let formattedDob = formatDate(dobVal);
+
+        let typeClass = 'none';
+        if(TYPE_INDEX !== -1 && row[TYPE_INDEX]) {
+            let val = row[TYPE_INDEX].toLowerCase();
+            if(val.includes('groom')) { typeClass = 'groom'; grooms++; }
+            else if(val.includes('bride')) { typeClass = 'bride'; brides++; }
+        }
+
+        // 3. Build the card HTML
+        html += `
+            <div class="card card-${typeClass}" data-type="${typeClass}" onclick="showDetail(${i})">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom:8px;">
+                    <h3>${name}</h3>
+                    <span style="background: rgba(0,0,0,0.06); padding: 3px 10px; border-radius: 15px; font-size: 0.95em; font-weight: bold;">
+                        ${subCasteVal}
+                    </span>
+                </div>
+                <p><span class="material-symbols-outlined">groups</span> ${gothraVal}</p>
+                <p><span class="material-symbols-outlined">date_range</span> ${formattedDob}</p>
+                <div style="margin-top: 10px; border-top: 1px solid #f0f0f0; padding-top: 10px;">
+                    <p><span class="material-symbols-outlined">work</span> ${jobVal}</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 5px; color: #666; font-size: 0.85em;">
+                <p style="margin: 0; display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <span class="material-symbols-outlined" style="font-size: 25px;">school</span> ${eduVal}
+                </p>
+                <p style="margin: 0; display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
+                    <span class="material-symbols-outlined" style="font-size: 25px;">location_on</span> ${cityVal}
+                </p>
+            </div>
+        </div>
+            </div>`;
+    }
+
+    container.innerHTML = html;
+    document.getElementById('btnGroom').innerText = `Grooms: ${grooms}`;
+    document.getElementById('btnBride').innerText = `Brides: ${brides}`;
+}
+
+    function showDetail(idx) {
+        const row = db[idx];
+        let h = '<div onclick="showGallery()" style="color:#2196F3; cursor:pointer; font-weight:bold; margin-bottom:20px; display:flex; align-items:center; gap:5px;"><span class="material-symbols-outlined">arrow_back</span> Back</div>';
+
+        // Media Grid Logic with Fallback
+        h += '<div class="media-grid">';
+        PHOTO_INDICES.forEach(pIdx => {
+            let rawData = row[pIdx];
+            if(!rawData || rawData.length < 5) return;
+
+            let [remoteUrl, localUrl] = rawData.split('|');
+
+            if(remoteUrl.includes('drive.google.com')) {
+                let id = remoteUrl.match(/[-\w]{25,}/);
+                if(id) remoteUrl = `https://drive.google.com/thumbnail?id=${id[0]}&sz=s0`;
+            }
+
+            h += `<img src="${remoteUrl}"
+                       class="detail-card-img"
+                       onerror="this.onerror=null; this.src='${localUrl}';"
+                       onclick="event.stopPropagation(); openModal(this.src)">`;
+        });
+        h += '</div>';
+
+        if(HOROSCOPE_INDEX !== -1 && row[HOROSCOPE_INDEX] && row[HOROSCOPE_INDEX].length > 10) {
+            h += `<a href="${row[HOROSCOPE_INDEX]}" target="_blank" class="horoscope-btn" style="display:flex; align-items:center; justify-content:center; gap:10px;">
+                    <span class="material-symbols-outlined">description</span> View Horoscope
+                  </a>`;
+        }
+
+        // Data Rows
+        for(let i=0; i<cols.length; i++) {
+            if(PHOTO_INDICES.includes(i) || i === HOROSCOPE_INDEX || EXCLUDED_INDICES.includes(i)) continue;
+            let label = cols[i];
+            let val = row[i] ? row[i].trim() : "";
+            if (label.toLowerCase().includes("date of birth") || label.toLowerCase().includes("dob")) { val = formatDate(val); }
+            if(val !== "" && val !== "-" && val !== "#") {
+                h += `<div class="row"><div class="label">${cols[i]}</div><div class="value">${val}</div></div>`;
+            }
+        }
+
+        document.getElementById('detailView').innerHTML = h;
+        document.getElementById('galleryPage').style.display = 'none';
+        document.getElementById('detailView').style.display = 'block';
+        window.scrollTo(0,0);
+    }
+
+    function showGallery() {
+        document.getElementById('detailView').style.display = 'none';
+        document.getElementById('galleryPage').style.display = 'block';
+    }
+
+    function openModal(src) {
+        const modal = document.getElementById('imgModal');
+        const modalImg = document.getElementById('fullImg');
+        modal.style.display = "flex";
+        modalImg.src = src;
+        document.body.style.overflow = "hidden";
+    }
+
+    function closeModal() {
+        document.getElementById('imgModal').style.display = "none";
+        document.body.style.overflow = "auto";
+    }
+
+    function search() {
+        let val = document.getElementById('search').value.toLowerCase();
+        let cards = document.getElementsByClassName('card');
+        for (let c of cards) {
+            const matchesSearch = c.innerText.toLowerCase().includes(val);
+            const cardType = c.getAttribute('data-type');
+            const matchesFilter = (currentFilter === 'all' || cardType === currentFilter);
+            c.style.display = (matchesSearch && matchesFilter) ? '' : 'none';
+        }
+    }
+
+    initGallery();
+</script>
+</body>
+</html>
