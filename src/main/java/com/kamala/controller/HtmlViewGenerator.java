@@ -10,7 +10,8 @@ import java.nio.charset.StandardCharsets;
 
 public class HtmlViewGenerator {
 
-    private static final List<String> EXCLUDED_KEYWORDS = Arrays.asList("Timestamp", "I Herby", "Unique ID");
+    private static final List<String> EXCLUDED_KEYWORDS = Arrays.asList("Timestamp", "I Herby",
+            "Filling the Form For","Unique ID", "Email Address", "Address", "Phone Number", "Salary");
 
     public static void generateApp(List<List<String>> data, String fileName) {
         if (data == null || data.isEmpty()) return;
