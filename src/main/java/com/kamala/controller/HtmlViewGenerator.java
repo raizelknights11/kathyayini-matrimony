@@ -10,147 +10,186 @@ import java.nio.charset.StandardCharsets;
 
 public class HtmlViewGenerator {
 
-    private static final List<String> EXCLUDED_KEYWORDS = Arrays.asList("Timestamp", "I Herby",
-            "Filling the Form For","Unique ID", "Email Address", "Address", "Phone Number", "Salary");
+    private static final String DB_PLACEHOLDER = "%%DB_DATA%%";
 
-    public static void generateApp(List<List<String>> data, String fileName) {
-        if (data == null || data.isEmpty()) return;
+    /**
+     * Resolves a filename relative to the project root.
+     *
+     * When IntelliJ runs ExcelReader, the working directory is typically the
+     * project root (where pom.xml lives). But to be safe, we also try the
+     * directory that contains the running JAR/classes as a fallback.
+     */
+    private static Path resolveProjectFile(String fileName) {
+        // 1. Try working directory first (standard IntelliJ / mvn exec behaviour)
+        Path fromCwd = Paths.get(fileName).toAbsolutePath();
+        if (Files.exists(fromCwd)) return fromCwd;
 
-        // Create a local images directory
-        String outputDir = new File(fileName).getParent();
-        if (outputDir == null) outputDir = ".";
-        Path imageFolder = Paths.get(outputDir, "images");
+        // 2. Try the directory that contains this compiled class / JAR
+        try {
+            URL location = HtmlViewGenerator.class.getProtectionDomain()
+                    .getCodeSource().getLocation();
+            Path classDir = Paths.get(location.toURI()).toAbsolutePath();
+            // Walk up from target/classes or target/*.jar until we find pom.xml
+            Path dir = Files.isRegularFile(classDir) ? classDir.getParent() : classDir;
+            for (int i = 0; i < 5; i++) {
+                if (dir == null) break;
+                if (Files.exists(dir.resolve("pom.xml"))) {
+                    Path candidate = dir.resolve(fileName);
+                    if (Files.exists(candidate)) return candidate;
+                    // Return anyway so the error message shows the right path
+                    return candidate;
+                }
+                dir = dir.getParent();
+            }
+        } catch (Exception ignored) {}
 
+        // 3. Give up — return cwd-relative path so the caller shows a clear error
+        return fromCwd;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  PUBLIC API
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public static void generateApp(List<List<String>> data, String templateFile, String outputFile) {
+        if (data == null || data.isEmpty()) {
+            System.err.println("No data provided.");
+            return;
+        }
+
+        // Resolve both paths relative to the project root
+        Path templatePath = resolveProjectFile(templateFile);
+        Path outputPath   = resolveProjectFile(outputFile);
+
+        System.out.println("Template : " + templatePath);
+        System.out.println("Output   : " + outputPath);
+
+        // ── 1. Create images/ folder next to output ───────────────────────────
+        Path imageFolder = outputPath.getParent().resolve("images");
         try {
             Files.createDirectories(imageFolder);
-        } catch (IOException e) { e.printStackTrace(); }
+        } catch (IOException e) {
+            System.err.println("Warning: could not create images/ directory: " + e.getMessage());
+        }
 
+        // ── 2. Find photo column indices ──────────────────────────────────────
         List<String> headers = data.get(0);
         List<Integer> photoIndices = new ArrayList<>();
-        List<Integer> excludedIndices = new ArrayList<>();
-        int horoscopeIdx = -1;
-        int typeIdx = -1;
         int uniqueIdIdx = -1;
 
         for (int i = 0; i < headers.size(); i++) {
-            if (headers.get(i).equalsIgnoreCase("Unique ID")) {
-                uniqueIdIdx = i;
-                break;
-            }
+            String h = headers.get(i).toLowerCase().trim();
+            if (h.equals("unique id"))    uniqueIdIdx = i;
+            else if (h.contains("photo")) photoIndices.add(i);
         }
 
-        for (int i = 0; i < headers.size(); i++) {
-            String headLower = headers.get(i).toLowerCase().trim();
-
-            boolean isExcluded = EXCLUDED_KEYWORDS.stream()
-                    .anyMatch(k -> headLower.contains(k.toLowerCase().trim()));
-
-            if (isExcluded) {
-                excludedIndices.add(i);
-            }
-
-            if (headLower.contains("filling the form for")) {
-                typeIdx = i;
-            } else if (headLower.contains("photo")) {
-                photoIndices.add(i);
-            } else if (headLower.contains("horoscope")) {
-                horoscopeIdx = i;
-            }
-        }
-
-        // Process rows and Download Images
+        // ── 3. Download photos (skip if already cached) ───────────────────────
         for (int i = 1; i < data.size(); i++) {
             List<String> row = data.get(i);
-            String uniqueId = (uniqueIdIdx != -1) ? row.get(uniqueIdIdx).replaceAll("[^a-zA-Z0-9]", "_") : "row_" + i;
+            String uniqueId = (uniqueIdIdx != -1 && uniqueIdIdx < row.size())
+                    ? row.get(uniqueIdIdx).replaceAll("[^a-zA-Z0-9]", "_")
+                    : "row_" + i;
 
             for (int pIdx : photoIndices) {
+                if (pIdx >= row.size()) continue;
                 String originalUrl = row.get(pIdx);
-                if (originalUrl != null && originalUrl.contains("drive.google.com")) {
-                    String fileId = extractId(originalUrl);
-                    String localFileName = uniqueId + "_" + pIdx + ".jpg";
-                    Path targetPath = imageFolder.resolve(localFileName);
+                if (originalUrl == null || !originalUrl.contains("drive.google.com")) continue;
 
-                    // SYNC: Only download if missing
-                    if (!Files.exists(targetPath)) {
-                        String downloadUrl = "https://drive.google.com/uc?export=download&id=" + fileId;
-                        downloadFile(downloadUrl, targetPath);
-                    }
+                String fileId = extractDriveId(originalUrl);
+                if (fileId == null) continue;
 
-                    String combinedPath = originalUrl + "|" + "images/" + localFileName;
-                    row.set(pIdx, combinedPath);
+                String localFileName = uniqueId + "_" + pIdx + ".jpg";
+                Path targetPath = imageFolder.resolve(localFileName);
+
+                if (!Files.exists(targetPath)) {
+                    downloadFile("https://drive.google.com/uc?export=download&id=" + fileId, targetPath);
                 }
+
+                row.set(pIdx, originalUrl + "|" + "images/" + localFileName);
             }
         }
 
+        // ── 4. Load template ──────────────────────────────────────────────────
+        String template;
         try {
-            String template = new String(Files.readAllBytes(Paths.get("DetailsViewPage.html")));
-            String finalHtml = template
-                    .replace("{{DATA_JSON}}", convertToJson(data))
-                    .replace("{{PHOTO_INDICES}}", photoIndices.toString())
-                    .replace("{{EXCLUDED_INDICES}}", excludedIndices.toString())
-                    .replace("{{HOROSCOPE_INDEX}}", String.valueOf(horoscopeIdx))
-                    .replace("{{TYPE_INDEX}}", String.valueOf(typeIdx));
-
-            Files.write(Paths.get(fileName), finalHtml.getBytes(StandardCharsets.UTF_8));
-            System.out.println("App generated successfully with local images!");
-
+            template = new String(Files.readAllBytes(templatePath), StandardCharsets.UTF_8);
         } catch (IOException e) {
-            System.err.println("Note: Could not copy style.css automatically.");
+            System.err.println("ERROR: Could not read template: " + templatePath);
+            System.err.println("Make sure index.template.html exists in the project root.");
             e.printStackTrace();
+            return;
         }
 
+        if (!template.contains(DB_PLACEHOLDER)) {
+            System.err.println("ERROR: Template does not contain placeholder: " + DB_PLACEHOLDER);
+            System.err.println("The line  const db = [...]  must be replaced with: " + DB_PLACEHOLDER);
+            return;
+        }
+
+        // ── 5. Inject data and write output ───────────────────────────────────
+        String finalHtml = template.replace(DB_PLACEHOLDER, "const db = " + convertToJson(data) + ";");
         try {
-            File htmlFile = new File(fileName);
-            String parentDir = htmlFile.getParent();
-            if (parentDir == null) parentDir = ".";
-
-            Path sourceCss = Paths.get("DetailsPageStyle.css");
-            Path targetCss = Paths.get(parentDir, "DetailsPageStyle.css");
-
-            if (Files.exists(sourceCss)) {
-                Files.copy(sourceCss, targetCss, StandardCopyOption.REPLACE_EXISTING);
-                System.out.println("Successfully copied DetailsPageStyle.css to " + parentDir);
-            } else {
-                System.out.println("Warning: DetailsPageStyle.css not found in project root. Skipping copy.");
-            }
+            Files.write(outputPath, finalHtml.getBytes(StandardCharsets.UTF_8));
+            System.out.println("✓ Generated: " + outputPath);
         } catch (IOException e) {
-            System.err.println("Error copying DetailsPageStyle.css: " + e.getMessage());
+            System.err.println("ERROR: Could not write: " + outputPath);
+            e.printStackTrace();
         }
     }
 
-    private static String extractId(String url) {
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("([-\\w]{25,})").matcher(url);
+    public static void openBrowser(String file) {
+        try {
+            Path resolved = resolveProjectFile(file);
+            if (Desktop.isDesktopSupported()) {
+                Desktop.getDesktop().open(resolved.toFile());
+            }
+        } catch (Exception e) {
+            System.err.println("Could not open browser: " + e.getMessage());
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  PRIVATE HELPERS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static String extractDriveId(String url) {
+        java.util.regex.Matcher m;
+        m = java.util.regex.Pattern.compile("[?&]id=([-\\w]{25,})").matcher(url);
+        if (m.find()) return m.group(1);
+        m = java.util.regex.Pattern.compile("/file/d/([-\\w]{25,})").matcher(url);
+        if (m.find()) return m.group(1);
+        m = java.util.regex.Pattern.compile("([-\\w]{25,})").matcher(url);
         return m.find() ? m.group(1) : null;
     }
 
     private static void downloadFile(String urlStr, Path targetPath) {
         try (InputStream in = new URL(urlStr).openStream()) {
             Files.copy(in, targetPath, StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("  ↓ " + targetPath.getFileName());
         } catch (Exception e) {
-            System.err.println("Failed to download: " + urlStr);
+            System.err.println("  ✗ Could not download " + urlStr + " (" + e.getMessage() + ")");
         }
     }
 
     private static String convertToJson(List<List<String>> data) {
         StringBuilder sb = new StringBuilder("[");
-        for (List<String> row : data) {
+        for (int r = 0; r < data.size(); r++) {
+            List<String> row = data.get(r);
             sb.append("[");
-            for (String s : row) {
-                String val = (s == null) ? "" : s;
-                String escaped = val.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ");
-                sb.append("\"").append(escaped).append("\",");
+            for (int c = 0; c < row.size(); c++) {
+                String val = (row.get(c) == null) ? "" : row.get(c);
+                val = val
+                        .replace("\\", "\\\\")
+                        .replace("\"", "\\\"")
+                        .replace("\r", "")
+                        .replace("\n", " ")
+                        .replace("\t", " ");
+                sb.append("\"").append(val).append("\"");
+                if (c < row.size() - 1) sb.append(",");
             }
-            sb.append("],");
+            sb.append("]");
+            if (r < data.size() - 1) sb.append(",\n");
         }
         return sb.append("]").toString();
-    }
-
-    public static void openBrowser(String file) {
-        try {
-            File htmlFile = new File(file);
-            if (Desktop.isDesktopSupported()) {
-                Desktop.getDesktop().open(htmlFile);
-            }
-        } catch (Exception e) { e.printStackTrace(); }
     }
 }

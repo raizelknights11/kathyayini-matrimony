@@ -1,240 +1,3103 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matrimony Directory</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0" />
-    <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="DetailsPageStyle.css">
-</head>
+    <title>Kathyayini Matrimony</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0"/>
+    <style>
+        :root {
+          --gold: #B8860B;
+          --gold-light: #D4AF37;
+          --gold-pale: #FDF6E3;
+          --cream: #FEFCF7;
+          --deep: #1A1208;
+          --text: #3D2B1F;
+          --muted: #8B7355;
+          --groom: #1B4F8A;
+          --groom-light: #EBF2FC;
+          --bride: #7B2D6E;
+          --bride-light: #F9EEF7;
+          --border: #E8DCC8;
+          --card-shadow: 0 2px 16px rgba(184,134,11,0.08);
+          --radius: 14px;
+          --admin-accent: #2E7D32;
+        }
 
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+          font-family: 'DM Sans', sans-serif;
+          background: var(--cream);
+          color: var(--text);
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+        }
+
+        /* ── ROLE TOGGLE ── */
+        #roleBar {
+          background: var(--deep);
+          padding: 6px 20px;
+          display: flex; align-items: center; justify-content: flex-end; gap: 12px;
+        }
+        #roleBar span { color: #aaa; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
+        .role-toggle {
+          display: flex; border-radius: 20px; overflow: hidden;
+          border: 1px solid rgba(255,255,255,0.15);
+        }
+        .role-btn {
+          padding: 4px 16px; font-size: 12px; font-weight: 600;
+          cursor: pointer; border: none; background: transparent;
+          color: #aaa; transition: all 0.2s; letter-spacing: 0.5px;
+        }
+        .role-btn.active { background: var(--gold); color: var(--deep); }
+
+        /* ── HEADER ── */
+        header {
+          background: var(--deep);
+          padding: 28px 20px 22px;
+          text-align: center;
+          position: relative;
+          overflow: hidden;
+        }
+        header::before {
+          content: '';
+          position: absolute; inset: 0;
+          background: radial-gradient(ellipse at 50% 0%, rgba(184,134,11,0.18) 0%, transparent 70%);
+        }
+        .header-inner { position: relative; z-index: 1; }
+        .header-ornament {
+          font-size: 11px; letter-spacing: 4px; color: var(--gold-light);
+          text-transform: uppercase; margin-bottom: 8px; opacity: 0.8;
+        }
+        header h1 {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: clamp(1.8em, 5vw, 2.8em);
+          font-weight: 700; color: #fff; letter-spacing: 1px;
+          line-height: 1.1;
+        }
+        header h1 span { color: var(--gold-light); }
+        .header-sub {
+          font-size: 12px; color: rgba(255,255,255,0.45);
+          margin-top: 6px; letter-spacing: 2px; text-transform: uppercase;
+        }
+        .gold-line {
+          width: 60px; height: 2px;
+          background: linear-gradient(90deg, transparent, var(--gold-light), transparent);
+          margin: 12px auto 0;
+        }
+
+        /* ── NAV TABS ── */
+        #navTabs {
+          background: #fff;
+          border-bottom: 1px solid var(--border);
+          display: flex; justify-content: center; gap: 0;
+          position: sticky; top: 0; z-index: 100;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+          overflow-x: auto;
+        }
+        .nav-tab {
+          padding: 14px 20px; font-size: 13px; font-weight: 600;
+          color: var(--muted); cursor: pointer;
+          border-bottom: 3px solid transparent;
+          white-space: nowrap;
+          transition: all 0.2s;
+          display: flex; align-items: center; gap: 6px;
+          letter-spacing: 0.3px;
+        }
+        .nav-tab:hover { color: var(--gold); }
+        .nav-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+        .nav-tab .material-symbols-outlined { font-size: 18px; }
+        .admin-only-tab  { display: none; }
+        body.admin-mode  .admin-only-tab  { display: flex; }
+        .admin-only-pills { display: none; }
+        body.admin-mode .admin-only-pills { display: flex; }
+        .customer-only-tab { display: none; }
+        body.customer-mode .customer-only-tab { display: flex; }
+
+        /* ── PAGES ── */
+        .page { display: none; flex: 1; }
+        .page.active { display: block; }
+
+        /* ── GALLERY PAGE ── */
+        #galleryPage { padding: 0; }
+
+        .gallery-controls {
+          background: #fff;
+          padding: 16px 20px;
+          border-bottom: 1px solid var(--border);
+          display: flex; flex-wrap: wrap;
+          align-items: center; gap: 12px;
+        }
+        .search-wrap {
+          flex: 1; min-width: 220px;
+          position: relative;
+        }
+        .search-wrap .material-symbols-outlined {
+          position: absolute; left: 14px; top: 50%;
+          transform: translateY(-50%);
+          color: var(--muted); font-size: 18px;
+        }
+        #search {
+          width: 100%; padding: 10px 14px 10px 40px;
+          border: 1.5px solid var(--border); border-radius: 30px;
+          font-size: 14px; font-family: 'DM Sans', sans-serif;
+          background: var(--cream); outline: none;
+          transition: border-color 0.2s;
+        }
+        #search:focus { border-color: var(--gold); }
+
+        .filter-pills { gap: 8px; flex-wrap: wrap; }
+        .pill {
+          padding: 7px 16px; border-radius: 20px;
+          font-size: 12px; font-weight: 600; cursor: pointer;
+          border: 1.5px solid var(--border);
+          background: var(--cream); color: var(--muted);
+          transition: all 0.2s; white-space: nowrap;
+        }
+        .pill.active-all    { background: var(--deep);   color: #fff; border-color: var(--deep); }
+        .pill.active-groom  { background: var(--groom);  color: #fff; border-color: var(--groom); }
+        .pill.active-bride  { background: var(--bride);  color: #fff; border-color: var(--bride); }
+
+        /* ── CARD GRID ── */
+        .container {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 20px; padding: 24px 20px;
+          max-width: 1280px; margin: 0 auto; width: 100%;
+        }
+
+        .card {
+          background: #fff; border-radius: var(--radius);
+          box-shadow: var(--card-shadow);
+          cursor: pointer;
+          border: 1px solid var(--border);
+          overflow: hidden;
+          transition: transform 0.2s, box-shadow 0.2s;
+          position: relative;
+        }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 8px 28px rgba(184,134,11,0.15); }
+
+        .card-stripe {
+          height: 4px;
+          background: var(--muted);
+        }
+        .card-groom .card-stripe { background: linear-gradient(90deg, var(--groom), #4A90D9); }
+        .card-bride .card-stripe { background: linear-gradient(90deg, var(--bride), #C06DB0); }
+
+        .card-photo {
+          width: 70px; height: 70px; border-radius: 50%;
+          object-fit: cover; border: 3px solid #fff;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+          background: var(--border);
+        }
+        .card-photo-placeholder {
+          width: 70px; height: 70px; border-radius: 50%;
+          background: var(--border); display: flex;
+          align-items: center; justify-content: center;
+          color: var(--muted); font-size: 28px;
+          border: 3px solid #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+          flex-shrink: 0;
+        }
+
+        .card-body { padding: 16px; }
+        .card-top { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+        .card-name-block { flex: 1; min-width: 0; }
+        .card-name {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 1.2em; font-weight: 700; color: var(--deep);
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .card-type-badge {
+          font-size: 10px; font-weight: 700; letter-spacing: 1px;
+          text-transform: uppercase; padding: 2px 8px; border-radius: 10px;
+          display: inline-block; margin-top: 2px;
+        }
+        .badge-groom { background: var(--groom-light); color: var(--groom); }
+        .badge-bride { background: var(--bride-light);  color: var(--bride); }
+        body.customer-mode .card-type-badge { display: none; }
+
+        .card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+        .tag {
+          font-size: 11px; padding: 3px 10px; border-radius: 10px;
+          background: var(--gold-pale); color: var(--gold);
+          border: 1px solid rgba(184,134,11,0.2); font-weight: 500;
+        }
+
+        .card-info { display: flex; flex-direction: column; gap: 5px; }
+        .card-info-row {
+          display: flex; align-items: center; gap: 6px;
+          font-size: 12.5px; color: var(--muted);
+        }
+        .card-info-row .material-symbols-outlined { font-size: 15px; color: var(--gold); flex-shrink: 0; }
+
+        /* Compare checkbox (admin only) */
+        .compare-check {
+          display: none;
+          position: absolute; top: 12px; right: 12px;
+          width: 22px; height: 22px; cursor: pointer;
+          accent-color: var(--gold);
+        }
+        body.admin-mode.compare-mode .compare-check { display: block; }
+
+        /* Expiry badge on card */
+        .expiry-badge {
+          position: absolute; bottom: 10px; right: 10px;
+          font-size: 10px; padding: 2px 8px; border-radius: 10px;
+          font-weight: 600; display: none;
+        }
+        body.admin-mode .expiry-badge { display: inline-block; }
+        .expiry-ok      { background: #E8F5E9; color: #2E7D32; }
+        .expiry-soon    { background: #FFF3E0; color: #E65100; }
+        .expiry-expired { background: #FFEBEE; color: #B71C1C; }
+
+        /* ── DETAIL VIEW ── */
+        #detailView {
+          display: none;
+          width: 100%;
+          padding: 24px 24px 60px;
+        }
+
+        .back-btn {
+          display: inline-flex; align-items: center; gap: 6px;
+          color: var(--gold); font-weight: 600; cursor: pointer;
+          font-size: 14px; margin-bottom: 20px;
+          padding: 8px 0;
+        }
+        .back-btn:hover { opacity: 0.75; }
+
+        .detail-card {
+          background: #fff; border-radius: var(--radius);
+          box-shadow: 0 8px 32px rgba(184,134,11,0.1);
+          border: 1px solid var(--border); overflow: hidden;
+        }
+
+        .detail-header {
+          padding: 24px;
+          background: var(--deep);
+          display: flex; align-items: center; gap: 20px;
+          position: relative;
+        }
+        .detail-header::before {
+          content: '';
+          position: absolute; inset: 0;
+          background: radial-gradient(ellipse at 0% 50%, rgba(184,134,11,0.15) 0%, transparent 70%);
+        }
+        .detail-avatar {
+          width: 90px; height: 90px; border-radius: 50%;
+          object-fit: cover; border: 3px solid var(--gold-light);
+          background: var(--border); flex-shrink: 0;
+          position: relative; z-index: 1; cursor: zoom-in;
+        }
+        .detail-avatar-placeholder {
+          width: 90px; height: 90px; border-radius: 50%;
+          background: rgba(255,255,255,0.08);
+          display: flex; align-items: center; justify-content: center;
+          color: rgba(255,255,255,0.4); font-size: 36px;
+          border: 3px solid var(--gold-light); flex-shrink: 0;
+          position: relative; z-index: 1;
+        }
+        .detail-title { position: relative; z-index: 1; }
+        .detail-name {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 1.7em; font-weight: 700; color: #fff;
+        }
+        .detail-id { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; letter-spacing: 1px; }
+        .detail-type-badge {
+          font-size: 11px; font-weight: 700; letter-spacing: 1px;
+          text-transform: uppercase; padding: 3px 12px; border-radius: 10px;
+          display: inline-block; margin-top: 6px;
+        }
+
+        /* ── LIGHTBOX CAROUSEL ── */
+        .photo-thumbs {
+          display: flex; gap: 12px; padding: 20px 28px 8px;
+        }
+        .photo-thumb {
+          width: 120px; height: 130px; object-fit: cover;
+          border-radius: 10px; cursor: zoom-in;
+          border: 3px solid transparent;
+          transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+          background: var(--gold-pale);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .photo-thumb:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.18); }
+        .photo-thumb.active { border-color: var(--gold); }
+
+        /* Lightbox */
+        #lightbox {
+          display: none; position: fixed; inset: 0; z-index: 9999;
+          background: rgba(0,0,0,0.93);
+          flex-direction: column; align-items: center; justify-content: center;
+        }
+        #lightbox.open { display: flex; }
+        .lightbox-img-wrap {
+          position: relative; display: flex; align-items: center; justify-content: center;
+          flex: 1; width: 100%; min-height: 0; padding: 0 60px;
+        }
+        #lightboxImg {
+          max-width: 100%; max-height: 80vh;
+          border-radius: 10px; object-fit: contain;
+          transition: opacity 0.2s;
+        }
+        .lightbox-arrow {
+          position: absolute; top: 50%; transform: translateY(-50%);
+          background: rgba(255,255,255,0.12); border: none; color: #fff;
+          width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
+          font-size: 22px; display: flex; align-items: center; justify-content: center;
+          transition: background 0.2s; user-select: none;
+        }
+        .lightbox-arrow:hover { background: rgba(255,255,255,0.25); }
+        .lightbox-arrow.prev { left: 10px; }
+        .lightbox-arrow.next { right: 10px; }
+        .lightbox-arrow.hidden { opacity: 0; pointer-events: none; }
+        .lightbox-top {
+          width: 100%; display: flex; align-items: center; justify-content: space-between;
+          padding: 12px 16px; flex-shrink: 0;
+        }
+        .lightbox-counter { font-size: 13px; color: rgba(255,255,255,0.5); }
+        .lightbox-close {
+          background: rgba(255,255,255,0.12); border: none; color: #fff;
+          width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+          font-size: 18px; display: flex; align-items: center; justify-content: center;
+        }
+        .lightbox-close:hover { background: rgba(255,255,255,0.25); }
+        .lightbox-dots {
+          display: flex; gap: 8px; padding: 14px 0 20px;
+        }
+        .lightbox-dot {
+          width: 7px; height: 7px; border-radius: 50%;
+          background: rgba(255,255,255,0.3); cursor: pointer;
+          transition: background 0.2s, transform 0.2s;
+        }
+        .lightbox-dot.active { background: var(--gold-light); transform: scale(1.3); }
+
+        /* ── HOROSCOPE OVERLAY ── */
+        .horoscope-btn {
+          display: inline-flex; align-items: center; gap: 8px;
+          background: linear-gradient(135deg, #4A148C, #7B1FA2);
+          color: #fff; padding: 11px 20px; border: none;
+          font-family: 'DM Sans', sans-serif; font-weight: 700;
+          font-size: 13px; border-radius: 10px; letter-spacing: 0.5px;
+          cursor: pointer; transition: opacity 0.2s; margin: 0 28px 16px;
+        }
+        .horoscope-btn:hover { opacity: 0.85; }
+        #horoscopeOverlay {
+          display: none; position: fixed; inset: 0; z-index: 20000;
+          background: rgba(0,0,0,0.88);
+          flex-direction: column; align-items: center; justify-content: center;
+        }
+        #horoscopeOverlay.open { display: flex; }
+        .horoscope-overlay-bar {
+          width: 100%; max-width: 900px;
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 12px 16px; flex-shrink: 0;
+        }
+        .horoscope-overlay-title {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 1.1em; color: #fff; font-weight: 600;
+        }
+        .horoscope-overlay-close {
+          background: rgba(255,255,255,0.12); border: none; color: #fff;
+          width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+          font-size: 18px; display: flex; align-items: center; justify-content: center;
+        }
+        .horoscope-overlay-close:hover { background: rgba(255,255,255,0.22); }
+        #horoscopeFrame {
+          width: 100%; max-width: 900px; flex: 1;
+          border: none; border-radius: 10px;
+          background: #fff; margin: 0 16px 20px;
+          min-height: 0;
+        }
+        .horoscope-overlay-fallback {
+          color: rgba(255,255,255,0.6); font-size: 13px; text-align: center;
+          padding: 0 16px 16px;
+        }
+        .horoscope-overlay-fallback a { color: var(--gold-light); }
+
+        /* Detail sections */
+        .detail-section { padding: 20px 28px; border-top: 1px solid var(--border); }
+        .detail-section-title {
+          font-size: 10px; font-weight: 700; letter-spacing: 2px;
+          text-transform: uppercase; color: var(--gold);
+          margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+        }
+        .detail-section-title::after {
+          content: ''; flex: 1; height: 1px; background: var(--border);
+        }
+
+        .detail-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 16px 24px;
+        }
+        .detail-field { }
+        .detail-field-label {
+          font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+          text-transform: uppercase; color: var(--muted); margin-bottom: 3px;
+        }
+        .detail-field-value {
+          font-size: 14px; color: var(--text); line-height: 1.4;
+        }
+        .detail-field.span-2 { grid-column: span 2; }
+
+        @media (max-width: 900px) {
+          .detail-grid { grid-template-columns: repeat(2, 1fr); }
+          .detail-field.span-2 { grid-column: span 1; }
+        }
+        @media (max-width: 500px) {
+          .detail-grid { grid-template-columns: 1fr 1fr; }
+          #detailView { padding: 16px 16px 40px; }
+          .detail-section { padding: 16px; }
+        }
+
+        /* Expiry & creation info (admin + own profile) */
+        .profile-meta {
+          display: flex; gap: 12px; padding: 12px 20px;
+          background: var(--gold-pale);
+          border-top: 1px solid rgba(184,134,11,0.2);
+          flex-wrap: wrap; font-size: 12px; color: var(--muted);
+        }
+        .profile-meta span { display: flex; align-items: center; gap: 5px; }
+        .profile-meta .material-symbols-outlined { font-size: 14px; }
+
+        /* Admin Notes */
+        #adminNotesSection {
+          display: none; padding: 16px 20px;
+          border-top: 1px solid var(--border);
+        }
+        body.admin-mode #adminNotesSection { display: block; }
+
+        .notes-title {
+          font-size: 10px; font-weight: 700; letter-spacing: 2px;
+          text-transform: uppercase; color: var(--admin-accent);
+          margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+        }
+        .notes-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+        #adminNotes {
+          width: 100%; min-height: 80px; padding: 10px 14px;
+          border: 1.5px solid var(--border); border-radius: 10px;
+          font-family: 'DM Sans', sans-serif; font-size: 13px;
+          resize: vertical; outline: none;
+          transition: border-color 0.2s;
+        }
+        #adminNotes:focus { border-color: var(--admin-accent); }
+
+        .suggested-profiles { margin-top: 12px; }
+        .suggested-label {
+          font-size: 11px; font-weight: 600; color: var(--muted);
+          margin-bottom: 6px;
+        }
+        .suggested-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+        .suggested-pill {
+          display: inline-flex; align-items: center; gap: 6px;
+          background: var(--groom-light); color: var(--groom);
+          border: 1px solid #90CAF9; border-radius: 20px;
+          padding: 4px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+        }
+        .suggested-pill:hover { background: #BBDEFB; }
+        .suggested-pill .remove-pill {
+          font-size: 14px; color: #90A4AE; cursor: pointer;
+        }
+        .suggested-pill .remove-pill:hover { color: #f44336; }
+
+        .add-suggested {
+          display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+        }
+        .add-suggested input {
+          padding: 7px 12px; border: 1.5px solid var(--border);
+          border-radius: 8px; font-size: 13px; font-family: 'DM Sans', sans-serif;
+          outline: none; width: 160px;
+        }
+        .add-suggested input:focus { border-color: var(--admin-accent); }
+        .btn-add-suggested, .btn-save-notes {
+          padding: 7px 14px; border: none; border-radius: 8px;
+          font-size: 12px; font-weight: 600; cursor: pointer;
+          display: flex; align-items: center; gap: 5px;
+        }
+        .btn-add-suggested { background: var(--groom-light); color: var(--groom); }
+        .btn-save-notes { background: var(--admin-accent); color: #fff; margin-top: 10px; }
+        .btn-save-notes:hover { opacity: 0.85; }
+        .notes-saved-msg { font-size: 11px; color: var(--admin-accent); margin-top: 5px; display: none; }
+
+        /* Expiry editor (admin) */
+        #expiryEditor {
+          display: none; padding: 12px 20px;
+          background: #FFFDE7; border-top: 1px solid #FFF176;
+        }
+        body.admin-mode #expiryEditor { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .expiry-editor-label { font-size: 12px; font-weight: 600; color: #E65100; }
+        #expiryInput {
+          padding: 6px 12px; border: 1.5px solid #FFE082; border-radius: 8px;
+          font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none;
+        }
+        .btn-save-expiry {
+          padding: 6px 14px; background: #E65100; color: #fff;
+          border: none; border-radius: 8px; font-size: 12px;
+          font-weight: 600; cursor: pointer;
+        }
+
+        /* ── COMPARE PAGE (old styles - kept for fallback) ── */
+        .compare-toolbar {
+          display: flex; align-items: center; justify-content: space-between;
+          margin-bottom: 20px; flex-wrap: wrap; gap: 10px;
+        }
+        .compare-toolbar h2 {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 1.5em; color: var(--deep);
+        }
+        #compareGrid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 20px;
+        }
+        .compare-card {
+          background: #fff; border-radius: var(--radius);
+          border: 1px solid var(--border);
+          box-shadow: var(--card-shadow);
+          overflow: hidden;
+        }
+        .compare-card-header {
+          padding: 16px;
+          display: flex; align-items: center; gap: 12px;
+        }
+        .compare-card-photo {
+          width: 56px; height: 56px; border-radius: 50%;
+          object-fit: cover; border: 2px solid var(--border);
+          background: var(--gold-pale);
+        }
+        .compare-card-name {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 1.1em; font-weight: 700; color: var(--deep);
+        }
+        .compare-field {
+          display: flex; border-top: 1px solid var(--border);
+          padding: 9px 16px; font-size: 12.5px;
+        }
+        .compare-field-label {
+          width: 120px; flex-shrink: 0;
+          color: var(--muted); font-weight: 600;
+          font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px;
+          padding-top: 1px;
+        }
+        .compare-field-value { color: var(--text); flex: 1; }
+        .compare-empty {
+          text-align: center; color: var(--muted);
+          padding: 60px 20px; font-size: 14px;
+          grid-column: 1/-1;
+        }
+        .compare-empty .material-symbols-outlined { font-size: 48px; display: block; margin-bottom: 10px; opacity: 0.4; }
+
+        /* ── NAKSHATRA / GUNA PAGE ── */
+        #gunaPage { padding: 24px 16px; max-width: 700px; margin: 0 auto; }
+        .guna-hero {
+          text-align: center; margin-bottom: 30px;
+        }
+        .guna-hero h2 {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 1.8em; color: var(--deep); margin-bottom: 6px;
+        }
+        .guna-hero p { color: var(--muted); font-size: 14px; }
+
+        .guna-selectors {
+          display: grid; grid-template-columns: 1fr 1fr;
+          gap: 20px; margin-bottom: 24px;
+        }
+        @media (max-width: 500px) { .guna-selectors { grid-template-columns: 1fr; } }
+
+        .guna-selector-box {
+          background: #fff; border-radius: var(--radius);
+          border: 1px solid var(--border); padding: 18px;
+          box-shadow: var(--card-shadow);
+        }
+        .guna-selector-box h3 {
+          font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+          text-transform: uppercase; margin-bottom: 14px;
+        }
+        .groom-box h3 { color: var(--groom); }
+        .bride-box  h3 { color: var(--bride); }
+
+        .guna-selector-box label {
+          display: block; font-size: 11px; font-weight: 600;
+          text-transform: uppercase; color: var(--muted);
+          margin-bottom: 5px; margin-top: 10px;
+        }
+        .guna-selector-box label:first-of-type { margin-top: 0; }
+        .guna-select, .guna-input {
+          width: 100%; padding: 9px 12px;
+          border: 1.5px solid var(--border); border-radius: 8px;
+          font-family: 'DM Sans', sans-serif; font-size: 13px;
+          background: var(--cream); outline: none;
+          transition: border-color 0.2s;
+        }
+        .guna-select:focus, .guna-input:focus { border-color: var(--gold); }
+
+        .btn-calculate {
+          display: block; width: 100%; padding: 14px;
+          background: linear-gradient(135deg, var(--gold), #8B6914);
+          color: #fff; border: none; border-radius: 10px;
+          font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 700;
+          cursor: pointer; letter-spacing: 0.5px; transition: opacity 0.2s;
+          margin-bottom: 24px;
+        }
+        .btn-calculate:hover { opacity: 0.9; }
+
+        /* Results */
+        #gunaResult { display: none; }
+        .guna-score-hero {
+          text-align: center;
+          background: var(--deep); color: #fff;
+          border-radius: var(--radius); padding: 28px 20px;
+          margin-bottom: 20px; position: relative; overflow: hidden;
+        }
+        .guna-score-hero::before {
+          content: '';
+          position: absolute; inset: 0;
+          background: radial-gradient(ellipse at 50% 0%, rgba(184,134,11,0.25) 0%, transparent 70%);
+        }
+        .guna-score-number {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 4em; font-weight: 700; color: var(--gold-light);
+          line-height: 1; position: relative;
+        }
+        .guna-score-max { font-size: 1.2em; color: rgba(255,255,255,0.5); }
+        .guna-score-label { font-size: 14px; color: rgba(255,255,255,0.7); margin-top: 6px; position: relative; }
+        .guna-verdict {
+          display: inline-block; margin-top: 10px;
+          padding: 5px 20px; border-radius: 20px;
+          font-size: 13px; font-weight: 700; position: relative;
+        }
+
+        .guna-breakdown {
+          background: #fff; border-radius: var(--radius);
+          border: 1px solid var(--border); overflow: hidden;
+          box-shadow: var(--card-shadow);
+        }
+        .guna-breakdown-title {
+          padding: 14px 18px;
+          font-size: 11px; font-weight: 700; letter-spacing: 2px;
+          text-transform: uppercase; color: var(--gold);
+          border-bottom: 1px solid var(--border);
+        }
+        .koota-row {
+          display: flex; align-items: center;
+          padding: 12px 18px; border-bottom: 1px solid var(--border);
+          gap: 10px;
+        }
+        .koota-row:last-child { border-bottom: none; }
+        .koota-name { flex: 1; font-weight: 600; font-size: 13px; }
+        .koota-desc { font-size: 11px; color: var(--muted); flex: 2; }
+        .koota-score { font-weight: 700; font-size: 14px; }
+        .koota-bar-wrap { flex: 3; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+        .koota-bar { height: 100%; border-radius: 3px; transition: width 0.5s; }
+        .score-full  { color: #2E7D32; }
+        .score-half  { color: #E65100; }
+        .score-zero  { color: #B71C1C; }
+        .bar-full    { background: #4CAF50; }
+        .bar-half    { background: #FF9800; }
+        .bar-zero    { background: #f44336; }
+
+        .guna-note {
+          font-size: 12px; color: var(--muted); text-align: center;
+          margin-top: 14px; line-height: 1.6;
+        }
+
+        /* ── INLINE GUNA SECTION (customers only) ── */
+        #inlineGunaSection {
+          display: none; padding: 20px 28px;
+          border-top: 3px solid var(--gold-pale);
+          background: linear-gradient(to bottom, var(--gold-pale), #fff);
+        }
+        body.customer-mode #inlineGunaSection { display: block; }
+
+        .inline-guna-title {
+          font-size: 11px; font-weight: 700; letter-spacing: 2px;
+          text-transform: uppercase; color: var(--gold);
+          margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+        }
+        .inline-guna-title .material-symbols-outlined { font-size: 16px; }
+
+        .inline-guna-body {
+          display: flex; align-items: center; gap: 16px;
+          flex-wrap: wrap; margin-bottom: 16px;
+        }
+        .inline-guna-profile {
+          flex: 1; min-width: 180px;
+          background: #fff; border-radius: 10px;
+          border: 1px solid var(--border); padding: 14px;
+        }
+        .inline-guna-label {
+          font-size: 10px; font-weight: 700; letter-spacing: 1px;
+          text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
+        }
+        .inline-guna-name {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 1.1em; font-weight: 700; color: var(--deep);
+        }
+        .inline-guna-meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+        .inline-guna-vs {
+          font-size: 24px; color: var(--gold); font-weight: 300;
+          flex-shrink: 0;
+        }
+        .inline-guna-select-wrap {
+          flex: 1; min-width: 200px;
+        }
+        .inline-guna-select-wrap .guna-select { width: 100%; margin-top: 6px; }
+
+        #inlineGunaResult { margin-top: 4px; }
+        .inline-score-bar {
+          display: flex; align-items: center; gap: 12px;
+          padding: 10px 0; border-bottom: 1px solid var(--border);
+          font-size: 13px;
+        }
+        .inline-score-bar:last-child { border-bottom: none; }
+        .inline-koota-name { width: 110px; font-weight: 600; flex-shrink: 0; }
+        .inline-koota-bar-wrap { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+        .inline-koota-bar { height: 100%; border-radius: 4px; transition: width 0.4s; }
+        .inline-score-val { width: 40px; text-align: right; font-weight: 700; flex-shrink: 0; }
+        .inline-score-hero {
+          display: flex; align-items: center; gap: 16px;
+          background: var(--deep); color: #fff;
+          border-radius: 10px; padding: 14px 20px;
+          margin-bottom: 14px; flex-wrap: wrap;
+        }
+        .inline-score-num {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 2.2em; font-weight: 700; color: var(--gold-light);
+        }
+        .inline-score-details { flex: 1; }
+        .inline-score-verdict {
+          display: inline-block; padding: 3px 12px;
+          border-radius: 12px; font-size: 12px; font-weight: 700;
+          margin-top: 4px;
+        }
+
+        /* ── MODAL ── */
+        .modal {
+          display: none; position: fixed; z-index: 9999;
+          inset: 0; background: rgba(0,0,0,0.9);
+          align-items: center; justify-content: center;
+          cursor: zoom-out;
+        }
+        .modal.open { display: flex; }
+        .modal img {
+          max-width: 95%; max-height: 95%;
+          border-radius: 8px; object-fit: contain;
+        }
+        .close-modal {
+          position: absolute; top: 16px; right: 24px;
+          color: #fff; font-size: 36px; cursor: pointer;
+          font-weight: 300; line-height: 1;
+        }
+
+        /* ── FOOTER ── */
+        footer {
+          background: var(--deep); color: rgba(255,255,255,0.4);
+          text-align: center; padding: 20px;
+          font-size: 12px; letter-spacing: 1px;
+          margin-top: auto;
+        }
+        footer span { color: var(--gold-light); }
+
+        /* ── COMPARE MODE BANNER ── */
+        #compareBanner {
+          display: none; position: sticky; bottom: 0; z-index: 200;
+          background: var(--deep); color: #fff;
+          padding: 12px 20px;
+          justify-content: space-between; align-items: center;
+          box-shadow: 0 -4px 16px rgba(0,0,0,0.2);
+          flex-wrap: wrap; gap: 10px;
+        }
+        body.admin-mode.compare-mode #compareBanner { display: flex; }
+        #compareBanner span { font-size: 13px; }
+        .btn-compare {
+          padding: 8px 20px; background: var(--gold);
+          color: var(--deep); border: none; border-radius: 20px;
+          font-weight: 700; font-size: 13px; cursor: pointer;
+        }
+
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--cream); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 600px) {
+          .container { grid-template-columns: 1fr; padding: 16px; gap: 14px; }
+          .gallery-controls { padding: 12px 16px; }
+          .detail-header { flex-direction: column; text-align: center; }
+          .detail-photos { justify-content: center; }
+          .guna-selectors { grid-template-columns: 1fr; }
+          #comparePage { padding: 16px; }
+          .nav-tab { padding: 12px 14px; font-size: 12px; }
+        }
+
+        /* ── LOGIN SCREEN ── */
+        #loginScreen {
+          position: fixed; inset: 0; z-index: 50000;
+          background: var(--deep);
+          display: flex; align-items: center; justify-content: center;
+          padding: 20px;
+        }
+        #loginScreen::before {
+          content: '';
+          position: absolute; inset: 0;
+          background: radial-gradient(ellipse at 50% 20%, rgba(184,134,11,0.2) 0%, transparent 65%);
+        }
+        .login-box {
+          background: #fff; border-radius: 20px;
+          width: 100%; max-width: 420px;
+          box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+          overflow: hidden; position: relative; z-index: 1;
+        }
+        .login-header {
+          background: var(--deep); padding: 28px 28px 22px;
+          text-align: center; position: relative;
+        }
+        .login-header::before {
+          content: '';
+          position: absolute; inset: 0;
+          background: radial-gradient(ellipse at 50% 0%, rgba(184,134,11,0.2) 0%, transparent 70%);
+        }
+        .login-logo {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 1.6em; font-weight: 700; color: #fff;
+          position: relative;
+        }
+        .login-logo span { color: var(--gold-light); }
+        .login-sub { font-size: 11px; color: rgba(255,255,255,0.4); letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; position: relative; }
+        .login-tabs {
+          display: flex; border-bottom: 1px solid var(--border);
+        }
+        .login-tab {
+          flex: 1; padding: 14px; text-align: center;
+          font-size: 13px; font-weight: 600; cursor: pointer;
+          color: var(--muted); border-bottom: 3px solid transparent;
+          transition: all 0.2s;
+        }
+        .login-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+        .login-form { padding: 24px 28px 28px; }
+        .login-form label {
+          display: block; font-size: 11px; font-weight: 700;
+          text-transform: uppercase; letter-spacing: 0.5px;
+          color: var(--muted); margin-bottom: 6px; margin-top: 16px;
+        }
+        .login-form label:first-of-type { margin-top: 0; }
+        .login-input {
+          width: 100%; padding: 11px 14px;
+          border: 1.5px solid var(--border); border-radius: 10px;
+          font-family: 'DM Sans', sans-serif; font-size: 14px;
+          background: var(--cream); outline: none;
+          transition: border-color 0.2s;
+        }
+        .login-input:focus { border-color: var(--gold); }
+        .login-input.error { border-color: #e53935; background: #fff5f5; }
+        .login-error {
+          font-size: 12px; color: #C62828; margin-top: 8px;
+          background: #FFEBEE; border-radius: 8px; padding: 8px 12px;
+          display: none;
+        }
+        .btn-login {
+          width: 100%; margin-top: 20px; padding: 13px;
+          background: linear-gradient(135deg, var(--gold), #8B6914);
+          color: #fff; border: none; border-radius: 10px;
+          font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 700;
+          cursor: pointer; letter-spacing: 0.5px; transition: opacity 0.2s;
+        }
+        .btn-login:hover { opacity: 0.9; }
+
+        /* ── TOP BAR (post-login) ── */
+        #topBar {
+          background: var(--deep);
+          padding: 7px 20px;
+          display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        }
+        .topbar-user {
+          display: flex; align-items: center; gap: 8px;
+          color: rgba(255,255,255,0.7); font-size: 12px;
+        }
+        .topbar-user .material-symbols-outlined { font-size: 16px; color: var(--gold-light); }
+        .topbar-role-badge {
+          font-size: 10px; font-weight: 700; letter-spacing: 1px;
+          text-transform: uppercase; padding: 2px 8px; border-radius: 10px;
+        }
+        .badge-admin-role    { background: rgba(46,125,50,0.25);  color: #81C784; }
+        .badge-customer-role { background: rgba(184,134,11,0.2);  color: var(--gold-light); }
+        .btn-logout {
+          padding: 4px 14px; font-size: 11px; font-weight: 700;
+          background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6);
+          border: 1px solid rgba(255,255,255,0.12); border-radius: 20px;
+          cursor: pointer; letter-spacing: 0.5px; transition: all 0.2s;
+        }
+        .btn-logout:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+        /* ── CUSTOMER PROFILE PAGE ── */
+        #myProfilePage { padding: 0; }
+        #myProfileContent { max-width: 1100px; margin: 0 auto; padding: 28px 24px 60px; }
+        .my-profile-hero {
+          background: var(--deep); border-radius: var(--radius);
+          padding: 32px 36px; margin-bottom: 24px;
+          display: flex; align-items: center; gap: 28px;
+          position: relative; overflow: hidden;
+        }
+        .my-profile-hero::before {
+          content: ''; position: absolute; inset: 0;
+          background: radial-gradient(ellipse at 0% 50%, rgba(184,134,11,0.18) 0%, transparent 65%);
+        }
+        .my-profile-avatar {
+          width: 100px; height: 100px; border-radius: 50%;
+          object-fit: cover; border: 3px solid var(--gold-light);
+          background: rgba(255,255,255,0.1); flex-shrink: 0;
+          position: relative; z-index: 1;
+        }
+        .my-profile-avatar-placeholder {
+          width: 100px; height: 100px; border-radius: 50%;
+          background: rgba(255,255,255,0.08);
+          display: flex; align-items: center; justify-content: center;
+          color: rgba(255,255,255,0.3); font-size: 40px;
+          border: 3px solid var(--gold-light); flex-shrink: 0;
+          position: relative; z-index: 1;
+        }
+        .my-profile-info { position: relative; z-index: 1; flex: 1; }
+        .my-profile-name {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 2em; font-weight: 700; color: #fff;
+        }
+        .my-profile-id { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 3px; letter-spacing: 1px; }
+        .my-profile-meta { font-size: 13px; color: rgba(255,255,255,0.55); margin-top: 8px; }
+
+        .my-profile-section-title {
+          font-size: 10px; font-weight: 700; letter-spacing: 2px;
+          text-transform: uppercase; color: var(--gold);
+          margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+        }
+        .my-profile-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+        /* Visited profiles grid */
+        .visited-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+          gap: 14px;
+        }
+        .visited-card {
+          background: #fff; border-radius: 12px;
+          border: 1px solid var(--border);
+          padding: 16px 14px 14px;
+          cursor: pointer;
+          transition: box-shadow 0.2s, transform 0.2s;
+          display: flex; flex-direction: column; align-items: center;
+          text-align: center; gap: 8px;
+          position: relative;
+        }
+        .visited-card:hover { box-shadow: var(--card-shadow); transform: translateY(-2px); }
+        .visited-card-photo {
+          width: 64px; height: 64px; border-radius: 50%;
+          object-fit: cover; background: var(--border); flex-shrink: 0;
+        }
+        .visited-card-photo-placeholder {
+          width: 64px; height: 64px; border-radius: 50%;
+          background: var(--border); display: flex; align-items: center; justify-content: center;
+          color: var(--muted); font-size: 26px;
+        }
+        .visited-card-name { font-weight: 700; font-size: 13px; color: var(--deep); line-height: 1.3; }
+        .visited-card-id   { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; }
+        .visited-card-time { font-size: 10px; color: var(--muted); }
+        .visited-card-dot {
+          position: absolute; top: 12px; right: 12px;
+          width: 8px; height: 8px; border-radius: 50%;
+        }
+        .visited-empty {
+          text-align: center; color: var(--muted); padding: 40px 20px;
+          font-size: 13px;
+        }
+        .visited-empty .material-symbols-outlined { font-size: 40px; display: block; margin-bottom: 8px; opacity: 0.35; }
+
+        /* ── COMPARE PAGE (redesigned) ── */
+        #comparePage.active { display: flex; flex-direction: column; height: calc(100vh - 120px); }
+        .compare-header {
+          background: #fff; border-bottom: 1px solid var(--border);
+          padding: 14px 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+          flex-shrink: 0;
+        }
+        .compare-header h2 {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 1.3em; color: var(--deep); margin-right: auto;
+        }
+        .compare-add-wrap { display: flex; align-items: center; gap: 8px; }
+        .compare-profile-select {
+          padding: 8px 12px; border: 1.5px solid var(--border);
+          border-radius: 8px; font-family: 'DM Sans', sans-serif;
+          font-size: 13px; background: var(--cream); outline: none;
+          min-width: 200px; transition: border-color 0.2s;
+        }
+        .compare-profile-select:focus { border-color: var(--gold); }
+        .btn-add-compare {
+          width: 36px; height: 36px; border-radius: 50%;
+          background: var(--gold); color: #fff; border: none;
+          font-size: 22px; cursor: pointer; display: flex;
+          align-items: center; justify-content: center;
+          flex-shrink: 0; transition: opacity 0.2s; line-height: 1;
+        }
+        .btn-add-compare:hover { opacity: 0.85; }
+        .btn-clear-compare {
+          padding: 7px 14px; font-size: 12px; font-weight: 600;
+          background: #FFEBEE; color: #C62828; border: 1px solid #EF9A9A;
+          border-radius: 8px; cursor: pointer;
+        }
+
+        /* Horizontal scroll compare table */
+        .compare-scroll-wrap {
+          flex: 1; overflow-x: auto; overflow-y: auto;
+          padding: 20px;
+        }
+        .compare-table {
+          display: flex; gap: 0; min-width: max-content;
+          border: 1px solid var(--border); border-radius: var(--radius);
+          overflow: hidden; background: #fff;
+          box-shadow: var(--card-shadow);
+        }
+        .compare-col {
+          min-width: 220px; max-width: 260px;
+          border-right: 1px solid var(--border);
+          flex-shrink: 0;
+        }
+        .compare-col:last-child { border-right: none; }
+        .compare-col-header {
+          padding: 16px; background: var(--deep);
+          position: sticky; top: 0; z-index: 2;
+        }
+        .compare-col-photo {
+          width: 52px; height: 52px; border-radius: 50%;
+          object-fit: cover; border: 2px solid var(--gold-light);
+          background: rgba(255,255,255,0.1); display: block; margin-bottom: 10px;
+        }
+        .compare-col-photo-placeholder {
+          width: 52px; height: 52px; border-radius: 50%;
+          background: rgba(255,255,255,0.08);
+          display: flex; align-items: center; justify-content: center;
+          color: rgba(255,255,255,0.3); font-size: 22px;
+          border: 2px solid var(--gold-light); margin-bottom: 10px;
+        }
+        .compare-col-name {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 1em; font-weight: 700; color: #fff;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .compare-col-id { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+        .compare-col-remove {
+          float: right; background: rgba(255,255,255,0.1); border: none;
+          color: rgba(255,255,255,0.5); border-radius: 50%;
+          width: 22px; height: 22px; cursor: pointer; font-size: 14px;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .compare-col-remove:hover { background: rgba(244,67,54,0.3); color: #fff; }
+        .compare-row {
+          display: flex; border-bottom: 1px solid var(--border);
+        }
+        .compare-row:last-child { border-bottom: none; }
+        .compare-row-label {
+          min-width: 130px; max-width: 130px; flex-shrink: 0;
+          background: var(--gold-pale);
+          padding: 10px 14px;
+          font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+          text-transform: uppercase; color: var(--gold);
+          border-right: 1px solid var(--border);
+          display: flex; align-items: center;
+          position: sticky; left: 0; z-index: 1;
+        }
+        .compare-label-col {
+          min-width: 130px; max-width: 130px;
+          flex-shrink: 0; border-right: 1px solid var(--border);
+        }
+        .compare-label-header {
+          padding: 16px 14px; background: var(--deep);
+          font-size: 10px; font-weight: 700; letter-spacing: 1px;
+          text-transform: uppercase; color: var(--gold-light);
+          height: 100%; display: flex; align-items: flex-end;
+          position: sticky; top: 0; z-index: 3;
+        }
+        .compare-cell {
+          padding: 10px 14px; font-size: 13px; color: var(--text);
+          border-right: 1px solid var(--border); min-width: 220px;
+          word-break: break-word;
+        }
+        .compare-cell:last-child { border-right: none; }
+        .compare-empty-state {
+          padding: 60px 20px; text-align: center; color: var(--muted);
+          width: 100%;
+        }
+        .compare-empty-state .material-symbols-outlined { font-size: 48px; display: block; margin-bottom: 10px; opacity: 0.3; }
+
+        /* ── ADMIN MODE INDICATOR ── */
+        body.admin-mode header::after {
+          content: 'ADMIN';
+          position: absolute; top: 10px; left: 16px;
+          font-size: 9px; letter-spacing: 2px; font-weight: 700;
+          color: #81C784; background: rgba(46,125,50,0.15);
+          padding: 3px 8px; border-radius: 10px; z-index: 2;
+        }
+
+        /* ── EDIT PROFILE MODAL ── */
+        #editProfileModal {
+          display: none; position: fixed; inset: 0; z-index: 10000;
+          background: rgba(0,0,0,0.55); align-items: flex-start; justify-content: center;
+          overflow-y: auto; padding: 30px 16px;
+        }
+        #editProfileModal.open { display: flex; }
+        .edit-modal-box {
+          background: var(--cream); border-radius: var(--radius);
+          width: 100%; max-width: 760px;
+          box-shadow: 0 24px 60px rgba(0,0,0,0.3);
+          overflow: hidden; position: relative;
+        }
+        .edit-modal-header {
+          background: var(--deep); padding: 20px 28px;
+          display: flex; align-items: center; justify-content: space-between;
+        }
+        .edit-modal-header h3 {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 1.4em; font-weight: 700; color: #fff;
+        }
+        .edit-modal-close {
+          background: rgba(255,255,255,0.1); border: none; color: rgba(255,255,255,0.7);
+          width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+          font-size: 18px; display: flex; align-items: center; justify-content: center;
+        }
+        .edit-modal-close:hover { background: rgba(255,255,255,0.2); color: #fff; }
+        .edit-modal-body { padding: 24px 28px 32px; }
+        .edit-section-title {
+          font-size: 10px; font-weight: 700; letter-spacing: 2px;
+          text-transform: uppercase; color: var(--gold);
+          margin: 24px 0 14px; display: flex; align-items: center; gap: 8px;
+        }
+        .edit-section-title:first-child { margin-top: 0; }
+        .edit-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+        .edit-grid {
+          display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+        }
+        @media (max-width: 560px) { .edit-grid { grid-template-columns: 1fr; } }
+        .edit-field { display: flex; flex-direction: column; gap: 5px; }
+        .edit-field.full-width { grid-column: 1 / -1; }
+        .edit-label {
+          font-size: 11px; font-weight: 700; text-transform: uppercase;
+          letter-spacing: 0.5px; color: var(--muted);
+        }
+        .edit-input {
+          padding: 9px 12px; border: 1.5px solid var(--border);
+          border-radius: 8px; font-family: 'DM Sans', sans-serif;
+          font-size: 13px; background: #fff; outline: none;
+          transition: border-color 0.2s; width: 100%;
+        }
+        .edit-input:focus { border-color: var(--gold); }
+        .edit-modal-footer {
+          padding: 16px 28px; background: #fff;
+          border-top: 1px solid var(--border);
+          display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+        }
+        .btn-edit-cancel {
+          padding: 10px 20px; background: var(--gold-pale); color: var(--text);
+          border: 1px solid var(--border); border-radius: 8px;
+          font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer;
+        }
+        .btn-edit-save {
+          padding: 10px 24px; background: var(--gold); color: #fff;
+          border: none; border-radius: 8px;
+          font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer;
+        }
+        .btn-edit-save:hover { opacity: 0.9; }
+        .edit-saved-msg { font-size: 12px; color: #2E7D32; font-weight: 600; display: none; }
+
+    </style>
+</head>
 <body>
 
-<div id="connection-status"></div>
+<!-- ═══════════════════════════════════════════
+     LOGIN SCREEN
+═══════════════════════════════════════════ -->
+<div id="loginScreen">
+    <div class="login-box">
+        <div class="login-header">
+            <div class="login-logo"><span>Kathyayini</span> Matrimony</div>
+            <div class="login-sub">Trusted Brahmin Alliances · Karnataka</div>
+        </div>
+        <div class="login-tabs">
+            <div class="login-tab active" id="loginTabCustomer" onclick="switchLoginTab('customer')">Customer</div>
+            <div class="login-tab" id="loginTabAdmin" onclick="switchLoginTab('admin')">Admin</div>
+        </div>
 
-<header>
-    <h1>Kamala Matrimony Directory</h1>
+        <!-- Customer Login -->
+        <div class="login-form" id="loginFormCustomer">
+            <label>Email Address</label>
+            <input type="email" class="login-input" id="custEmail" placeholder="your@email.com">
+            <label>Password</label>
+            <input type="password" class="login-input" id="custPassword" placeholder="Enter password">
+            <div class="login-error" id="custError"></div>
+            <button class="btn-login" onclick="loginCustomer()">Sign In</button>
+        </div>
+
+        <!-- Admin Login -->
+        <div class="login-form" id="loginFormAdmin" style="display:none">
+            <label>Username</label>
+            <input type="text" class="login-input" id="adminUsername" placeholder="Admin username">
+            <label>Password</label>
+            <input type="password" class="login-input" id="adminPassword" placeholder="Admin password">
+            <div class="login-error" id="adminError"></div>
+            <button class="btn-login" onclick="loginAdmin()">Sign In as Admin</button>
+        </div>
+    </div>
+</div>
+
+<!-- Top Bar -->
+<div id="topBar" style="display:none">
+    <div class="topbar-user">
+        <span class="material-symbols-outlined">account_circle</span>
+        <span id="topBarName">—</span>
+    </div>
+    <button class="btn-logout" onclick="logout()">
+        <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle">logout</span> Sign Out
+    </button>
+</div>
+
+<!-- Header -->
+<header id="mainHeader" style="display:none">
+    <div class="header-inner">
+        <div class="header-ornament">✦ Est. 2024 ✦</div>
+        <h1><span>Kathyayini</span> Matrimony</h1>
+        <p class="header-sub">Trusted Brahmin Alliances · Karnataka</p>
+        <div class="gold-line"></div>
+    </div>
 </header>
 
-<div id="galleryPage">
-    <div style="padding: 20px 0 0 0;">
-        <input type="text" id="search" placeholder="Search name, education, or job..." onkeyup="search()">
+<!-- Nav Tabs -->
+<div id="navTabs" style="display:none">
+    <div class="nav-tab active" onclick="showPage('galleryPage', this)">
+        <span class="material-symbols-outlined">grid_view</span> Profiles
+    </div>
+    <div class="nav-tab customer-only-tab" onclick="showPage('myProfilePage', this)">
+        <span class="material-symbols-outlined">person</span> My Profile
+    </div>
+    <div class="nav-tab admin-only-tab" onclick="showPage('comparePage', this)">
+        <span class="material-symbols-outlined">compare</span> Compare
+    </div>
+    <div class="nav-tab admin-only-tab" onclick="showPage('gunaPage', this)">
+        <span class="material-symbols-outlined">stars</span> Guna Match
+    </div>
+</div>
 
-        <div class="stats-bar" id="statsBar">
-            <div class="stat-item stat-all active-filter" id="btnAll" onclick="filterType('all')">All</div>
-            <div class="stat-item stat-groom" id="btnGroom" onclick="filterType('groom')">Grooms: 0</div>
-            <div class="stat-item stat-bride" id="btnBride" onclick="filterType('bride')">Brides: 0</div>
+<!-- ═══════════════════════════════════════════
+     GALLERY PAGE
+═══════════════════════════════════════════ -->
+<div id="galleryPage" class="page active">
+    <div class="gallery-controls">
+        <div class="search-wrap">
+            <span class="material-symbols-outlined">search</span>
+            <input type="text" id="search" placeholder="Search by name, education, job..." oninput="doSearch()">
+        </div>
+        <div class="filter-pills admin-only-pills" id="filterPills">
+            <div class="pill active-all" id="pillAll"   onclick="filterType('all')">All</div>
+            <div class="pill" id="pillGroom" onclick="filterType('groom')">Grooms: 0</div>
+            <div class="pill" id="pillBride" onclick="filterType('bride')">Brides: 0</div>
         </div>
     </div>
     <div class="container" id="cardContainer"></div>
 </div>
 
-<div id="detailView"></div>
-
-<div id="imgModal" class="modal" onclick="closeModal()">
-    <span class="close-modal">&times;</span>
-    <img class="modal-content" id="fullImg">
+<!-- ═══════════════════════════════════════════
+     DETAIL VIEW (overlays gallery)
+═══════════════════════════════════════════ -->
+<div id="detailView">
+    <div class="back-btn" id="backBtn" onclick="goBack()">
+        <span class="material-symbols-outlined">arrow_back</span>
+        <span id="backLabel">Back to Profiles</span>
+    </div>
+    <div class="detail-card" id="detailCard"></div>
 </div>
 
+<!-- ═══════════════════════════════════════════
+     MY PROFILE PAGE (customer only)
+═══════════════════════════════════════════ -->
+<div id="myProfilePage" class="page">
+    <div id="myProfileContent" style="padding:24px 20px 60px;max-width:960px;margin:0 auto"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     COMPARE PAGE (admin only - redesigned)
+═══════════════════════════════════════════ -->
+<div id="comparePage" class="page">
+    <div class="compare-header">
+        <h2>Profile Comparison</h2>
+        <div class="compare-add-wrap">
+            <select class="compare-profile-select" id="compareAddSelect">
+                <option value="">— Select a profile to add —</option>
+            </select>
+            <button class="btn-add-compare" onclick="addToCompare()" title="Add profile">+</button>
+        </div>
+        <button class="btn-clear-compare" onclick="clearCompareTable()">Clear All</button>
+        <button onclick="showGallery()" style="padding:7px 14px;font-size:12px;font-weight:600;background:var(--gold-pale);color:var(--deep);border:1px solid var(--border);border-radius:8px;cursor:pointer">← Back</button>
+    </div>
+    <div class="compare-scroll-wrap">
+        <div id="compareTableWrap">
+            <div class="compare-empty-state">
+                <span class="material-symbols-outlined">compare_arrows</span>
+                Use the dropdown above to add profiles for comparison.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     GUNA MATCH PAGE
+═══════════════════════════════════════════ -->
+<div id="gunaPage" class="page">
+    <div class="guna-hero">
+        <h2>Ashtakoota Guna Match</h2>
+        <p>Calculate compatibility score based on Vedic astrology</p>
+    </div>
+
+    <div class="guna-selectors">
+        <div class="guna-selector-box groom-box">
+            <h3>Groom</h3>
+            <label>Select Profile (optional)</label>
+            <select class="guna-select" id="gunaGroomProfile" onchange="loadNakshatra('groom')">
+                <option value="">— Enter manually —</option>
+            </select>
+            <label>Nakshatra</label>
+            <select class="guna-select" id="gunaGroomNakshatra" onchange="setGunaFieldError('gunaGroomNakshatra',false)">
+                <option value="">— Select Nakshatra —</option>
+            </select>
+            <label>Rashi</label>
+            <select class="guna-select" id="gunaGroomRashi" onchange="setGunaFieldError('gunaGroomRashi',false)">
+                <option value="">— Select Rashi —</option>
+            </select>
+            <label>Gana</label>
+            <select class="guna-select" id="gunaGroomGana">
+                <option value="">— Select Gana —</option>
+            </select>
+            <label>Nadi</label>
+            <select class="guna-select" id="gunaGroomNadi">
+                <option value="">— Select Nadi —</option>
+            </select>
+        </div>
+
+        <div class="guna-selector-box bride-box">
+            <h3>Bride</h3>
+            <label>Select Profile (optional)</label>
+            <select class="guna-select" id="gunaBrideProfile" onchange="loadNakshatra('bride')">
+                <option value="">— Enter manually —</option>
+            </select>
+            <label>Nakshatra</label>
+            <select class="guna-select" id="gunaBrideNakshatra" onchange="setGunaFieldError('gunaBrideNakshatra',false)">
+                <option value="">— Select Nakshatra —</option>
+            </select>
+            <label>Rashi</label>
+            <select class="guna-select" id="gunaBrideRashi" onchange="setGunaFieldError('gunaBrideRashi',false)">
+                <option value="">— Select Rashi —</option>
+            </select>
+            <label>Gana</label>
+            <select class="guna-select" id="gunaBrideGana">
+                <option value="">— Select Gana —</option>
+            </select>
+            <label>Nadi</label>
+            <select class="guna-select" id="gunaBrideNadi">
+                <option value="">— Select Nadi —</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="gunaValidationError" style="display:none; background:#FFEBEE; color:#C62828; border:1px solid #EF9A9A; border-radius:10px; padding:12px 16px; margin-bottom:16px; font-size:13px; font-weight:500;"></div>
+
+    <button class="btn-calculate" onclick="calculateGuna()">Calculate Guna Score ✦</button>
+
+    <div id="gunaResult"></div>
+    <p class="guna-note">Ashtakoota system scores compatibility across 8 Kootas for a maximum of 36 Gunas.<br>18+ is generally considered acceptable for marriage.</p>
+</div>
+
+<!-- Lightbox Carousel -->
+<div id="lightbox" onclick="if(event.target===this)closeLightbox()">
+    <div class="lightbox-top">
+        <span class="lightbox-counter" id="lightboxCounter"></span>
+        <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    </div>
+    <div class="lightbox-img-wrap">
+        <button class="lightbox-arrow prev" id="lightboxPrev" onclick="lightboxNav(-1)">&#8249;</button>
+        <img id="lightboxImg" src="" alt="">
+        <button class="lightbox-arrow next" id="lightboxNext" onclick="lightboxNav(1)">&#8250;</button>
+    </div>
+    <div class="lightbox-dots" id="lightboxDots"></div>
+</div>
+
+<!-- Horoscope Overlay -->
+<div id="horoscopeOverlay" onclick="if(event.target===this)closeHoroscope()">
+    <div class="horoscope-overlay-bar">
+        <span class="horoscope-overlay-title">✦ Horoscope</span>
+        <button class="horoscope-overlay-close" onclick="closeHoroscope()">✕</button>
+    </div>
+    <iframe id="horoscopeFrame" src="" allowfullscreen></iframe>
+    <div class="horoscope-overlay-fallback">
+        If the document doesn't load, <a id="horoscopeDirectLink" href="#" target="_blank">open it directly ↗</a>
+    </div>
+</div>
+
+
 <footer>
-    <p>&copy; 2024 Kamala Matrimony | Confidential</p>
+    <p>&copy; 2024 <span>Kathyayini</span> Matrimony · Confidential · All Rights Reserved</p>
 </footer>
 
 <script>
-    const db = {{DATA_JSON}};
-    const PHOTO_INDICES = {{PHOTO_INDICES}};
-    const EXCLUDED_INDICES = {{EXCLUDED_INDICES}};
-    const HOROSCOPE_INDEX = {{HOROSCOPE_INDEX}};
-    const TYPE_INDEX = {{TYPE_INDEX}};
-    const cols = db[0];
+    // ═══════════════════════════════════════════
+    //  DATA
+    // ═══════════════════════════════════════════
+    const db = [["Unique ID","Timestamp","Email Address","Phone Number","Filling the Form For","Name","Date Of Birth","Time Of Birth","Place of Birth","Marital Status","Nakshatra","Charana","Rashi","Gothra","Sub Caste","ಮಠ - Mata","Education ","Work Field","Currently Working-In(Company Name) and As(Position)","Salary(LPA)","Father's Name","Occupation ","Phone Number","Father's Native","Mother's Name","Occupation ","Phone Number","Mother's Native","Siblings","Address","Staying In","Planning To Relocate","Height (in feet) - example 5 / 5`2 / 5`11","Mention your degrees ","Age Gap","Will agree on Same Gothra","Will agree on any Bhramins and Mata","Required Martial Status","Abroad Relocation ","Language Preference ","Habits","If currently not staying in Bengaluru Please mention the city","Local Relocation","Photo 1 - of Bride or Groom","Photo 2 - of Bride or Groom","Horoscope","* I Herby declare that the above particulars furnished is true and correct for the best of my knowledge and for the purpose of finding bride/ groom for self or family members only and will not use profiles for any commercial purposes including agent activities/ brokerage activities or sharing and forwarding to other groups or platforms. I Accept all terms and conditions of Kathyayini Matrimony Services","","","","","","","","","","","","",""],
+    ["B20251119001","11/19/2025 9:25:57","sushmithaasharma@gmail.com","9791338697","Bride","Susmithaa N","5/29/97","10:45:00 pm","Dharmapuri ","","","","","Vasishtha","Smartha","Sringeri ","Doctor ","Pursuing MD in Mandya ","MANDYA INSTITUTE OF MEDICAL SCIENCES ","50k (stipend)","Nagarajan ","Retd person from Ashok Leyland ","9791338697","Hosur","Nagarathna ","House Wife ","9003449679","Hosur","Sisters","Terracon homes layout , Chandapura ","India","To India","5’3”","MBBS , MD ","Up to 4","No","No","Unmarried Only","India Only","Any Language Is Fine","No Smoking or Drinking","","Any city in Karnataka is fine","https://drive.google.com/open?id=10zboiY_hEG-7nQc4TJhzI5znbU6kMMWj|images/B20251119001_43.jpg","https://drive.google.com/open?id=191cokRdAR23IL2PZ7W9PNts_e6K9Jebe|images/B20251119001_44.jpg","https://drive.google.com/open?id=1wcmdSzs-o-f9Se0KvhtLv9uskAm9gL7b","I Agree","","","","","","","","","","","","",""],
+    ["G20251120001","11/20/2025 12:15:47","kvsn63@gmail.com","9844730248","Groom","Pramod K S","10/14/97","10:58:00 am","Bangalore","","","","","Kashyapa","Madhwa","Vyasaraja ","Degree, Masters, BE","IT","Hashedin by Delloitte","20","Sathyanarayana Rao K V","Retired","9844730248","Tumkur ","Sujatha K G","Home Maker","7892005498","Tumkur","Sisters","#203,1st Floor, Siri Paramount Apartment, Gowdanapalya, Bangalore - 560061","India","To Other Country","5' 9","BE in CS","Up to 4","No","No","Unmarried Only","India Only","Kannada Only","No Smoking or Drinking","","Any city in Karnataka is fine","https://drive.google.com/open?id=1xdepKhlbY58LQu1NiJ8i_9e5Qri775Rn|images/G20251120001_43.jpg","https://drive.google.com/open?id=1BAa9PO4D7Ycwsm6yA07yP2xUGn-1-TfB|images/G20251120001_44.jpg","https://drive.google.com/open?id=1Is0Ku5fEVjPuKiZpn39oHv0r1WoxLS-O","I Agree","","","","","","","","","","","","",""],
+    ["B20251120002","11/20/2025 12:30:12","eliteestatesneha@gmail.com","9036580375","Bride","Sneha","4/8/96","7:50:00 am","Bangalore","","","","","Kaundinya","Smartha","Sringeri mata","Degree, ","Digital Marketing ","Orgorbit,Digital Marketing ","6L","Narayana ","Business ","9036580375","Bangalore ","Usha","Homemaker ","9036580375","Mandya","No Siblings","Chikkalasandra ","India","To India","5.7","BBA,PGD","Up to 4","No","Maybe","Unmarried Only","Can move to Abroad","Kannada Only","Occasionally Yes","","only Bengaluru","https://drive.google.com/open?id=1YVBZzzi1Pntf58xtCRTjWKwPA4ltOj_h|images/B20251120002_43.jpg","https://drive.google.com/open?id=18ZYBSVSmkMDJT1ThFQL5UHHxgNkP2S6c|images/B20251120002_44.jpg","https://drive.google.com/open?id=16vUys-Dul2gbG25GhCEftqK8XDxt5NOC","I Agree","","","","","","","","","","","","",""],
+    ["B20251120003","11/20/2025 14:39:22","nravi.1042@gmail.com","9448393922","Bride","Manasa R","12/8/98","1:12:00 pm","Nagpur","","","","","Kashyapa","Smartha","Shankar Mutt- Hoysala Karnataka ","BE","IT","Cloud Engineer at Evertz ","15","Ravindra N","Civil Engineer","9448393922","Hassan","G S Shylashree ","HOD and Professor ","9663608339","","No Siblings","Jayanagar 9th block ","India","To India","5.5","B.E in ISE","Up to 4","Yes","Maybe","Unmarried Only","Will be Back in India","Any Language Is Fine","No Smoking or Drinking","Bengaluru","only Bengaluru","https://drive.google.com/open?id=1v5xLfx1tqY55BgLcB8Da3seUWdV2c_ZF|images/B20251120003_43.jpg","https://drive.google.com/open?id=1K4wm-5_YwOqJ3Yzr74Ss-VOBGqfUGizg|images/B20251120003_44.jpg","","I Agree","","","","","","","","","","","","",""],
+    ["G20251120004","11/20/2025 17:31:32","rsuhasballal@gmail.com","9972645412","Groom","Suhas Ballal R ","8/4/95","1:15:00 am","Tumkur ","","","","","Vasishtha","Shivali","Puttige","BE","IT","Software Developer in Lighthouse House Asia Pacific ","21","Rajesh Ballal k","Business ","9972645412","Udupi","Pushpa p h","Retired","9972645412","Chitradurga","No Siblings","Srilakshminarayana r t Nagar 2nd cross Tumkur ","India","To India","5'10","Engineering ","Up to 7","No","Yes","Unmarried Only","India Only","Any Language Is Fine","No Smoking or Drinking","Tumkur","Any city in India is fine","https://drive.google.com/open?id=1hwMkLWHsQYc0g00s8UhoAbtlRtAJ6Lxj|images/G20251120004_43.jpg","https://drive.google.com/open?id=1cYaFcbxtlKwgaxhtqLtcS36BPe-4aFUo|images/G20251120004_44.jpg","https://drive.google.com/open?id=12VryMPWUf2ysN-codoS5_j5k-67XJxKI","I Agree","","","","","","","","","","","","",""],
+    ["B20251120005","11/20/2025 17:51:22","yuvashree121@gmail.com","9916875826","Bride","Yuvashree TK","9/12/94","9:20:00 pm","Coimbatore","","","","","Vasishtha","SriVaishnava","Sri Ramanuja","Masters","Private Sector","Avery Dennison","confidential ","Karmega Kannan T R","Retired","9483902988","","Rekha T R","Retired","9916875826","","No Siblings","Mysore","India","To India","5.5","","Up to 4","Maybe","Yes","Unmarried Only","Can move to Abroad","Kannada Only","No Smoking or Drinking","Bengaluru","only Bengaluru","https://drive.google.com/open?id=1evelwPelY2amEBG33Gftrbf60WROEv3C|images/B20251120005_43.jpg","https://drive.google.com/open?id=1FcRLSJH-h4-guKv6Jvgwqpf6nxzpPI_m|images/B20251120005_44.jpg","","I Agree","","","","","","","","","","","","",""],
+    ["B20251120006","11/20/2025 18:57:16","anushaani846@gmail.com","7975978318","Bride","Anusha N","6/28/98","3:05:00 am","Mulbagal ","","","","","Vasishtha","Smartha","Shankara Mata","BE","IT","Wells Fargo","USD","Nagraj Rao","Retired","9620601828","","Shoba Rani","Housewife ","9620601828","Mulbagal","Brothers","Kumbar Palya , kasaba street, Mulbagal, kolar(D)","Other Country","To India","5.3","","Up to 5","No","Yes","Unmarried Only","Already In Abroad","Kannada Only","No Smoking or Drinking","USA","Any city in Karnataka is fine","https://drive.google.com/open?id=1OFtsY29JHrMg14AUIbtoTcB9AE0qjIW3|images/B20251120006_43.jpg","https://drive.google.com/open?id=1iDI_NmhSyydHysRjlXnJpZ6nMEhyKmjt|images/B20251120006_44.jpg","","I Agree","","","","","","","","","","","","",""],
+    ["G20251120007","11/20/2025 20:49:41","poornima143p@gmail.com","7338024143","Groom","Harish p","7/2/92","7:35:00 am","Bangalore","Never Married","ಪುಷ್ಯ (Pushya)","","ಕರ್ಕಾಟಕ - Cancer","Kaundinya","Smartha","Shringeri mutt","MBA","Own Business","CEO @platoon constructions","3500000","Late s pattabhiraman ","BBMP Contractor ","7338024143","Bangalore","AR Ramamani","Retired Teacher ","9986191434","Mysore","Sisters","Padmanabhanagar Bangalore","India","To India","5’4","BBM","Up to 8","Maybe","Yes","Unmarried Only","India Only","Any Language Is Fine","Occasionally Yes","Bengaluru","Any city in India is fine","https://drive.google.com/open?id=1_PZNXJSsq5wYZN5nJz1ST1WsIbNDlMTo|images/G20251120007_43.jpg","https://drive.google.com/open?id=1F6yHC3jaStCl53uCJvS3rCrjtLb2xpUQ|images/G20251120007_44.jpg","https://drive.google.com/open?id=1Evfa1LN5OnlDqLk1Wccy687hoYzICg-y","I Agree","","","","","","","","","","","","",""],
+    ["B20251120001","11/20/2025 22:46:09","prabhaashoks1993@gmail.com","9480628511","Bride","Akhila","12/10/93","10:04:00 am","Bangalore","Never Married","ಸ್ವಾತಿ (Swati)","","ತುಲಾ - Libra","Atri","Madhwa","Bhimanakatte","BE, MBA","Private Sector","KPMG,Canada,Cyber security consultant ","Can$75k","S Ashok ","Retired Bank officer","9480628511","Mysore ","Prabha S","Homemaker","9480628511","Bangalore ","No Siblings","Madhav Bhavan, 369 Jhansi laxmi Bai Road  Mysore 570005","Other Country","To Other Country","5'4\"","BE in IP and MBA from smith Business school,Kingston,Canada","Up to 3","No","Yes","Unmarried Only","Already In Abroad","Kannada Only","No Smoking or Drinking","Toronto,Canada","Any city in India is fine","https://drive.google.com/open?id=1pns3LWNTokFjo-CmeOD2IZ92Nk0nBYuN|images/B20251120001_43.jpg","https://drive.google.com/open?id=1ZHEIezapxKtwYJUvKiEcTcOXfASp6aH7|images/B20251120001_44.jpg","https://drive.google.com/open?id=1XgmGODWNZRebWBrOioU6LjNDEboxgetw","I Agree","","","","","","","","","","","","",""],
+    ["G20251212001","12/12/2025 21:37:42","smadhuri1997@gmail.com","8548966962","Groom","Madan S","5/10/95","10:30:00 am","Bangalore","Never Married","ಪೂರ್ವ ಫಲ್ಗುಣಿ (Purva Phalguni)","","ಸಿಂಹ - Leo","Vasishtha","Smartha","Sringeri matta ","MS","IT","Analog Devices as Design Engineer","will be disclosed later","ShivaKumar A V","Retired government Official","8548966962","Arkalagudu Hassan","Sudha S (Late)","-","9481476752","-","Sisters","Chikkalasandra , Uttarahalli , Bangalore ","Other Country","To India","5'5","MS in USA on Electronics and communication","Up to 6","Maybe","Yes","Unmarried Only","Already In Abroad","Any Language Is Fine","No Smoking or Drinking","USA - Boston","Any city in India is fine","https://drive.google.com/open?id=1Sg6e_5fJniTtCBWbWhNTiO9_k_pb_zLc|images/G20251212001_43.jpg","https://drive.google.com/open?id=14QXBcK85Z0uTiCyy0qr6r88AQgNN6HD4|images/G20251212001_44.jpg","https://drive.google.com/open?id=1xhMxTBsdTpGr1B-bQ-_mfIhZOhoP8-n3","I Agree","","","","","","","","","","","","",""],
+    ["G20251212002","12/13/2025 0:08:58","pallavitatti02@gmail.com","00","Groom","Anantha Murthy ","6/24/91","2:30:00 am","Tumkur ","Never Married","ಅನುರಾಧಾ (Anuradha)","","ವೃಶ್ಚಿಕ - Scorpio","Kashyapa","Madhwa","Rayaramata ","Masters","Private Sector","VSN business solutions ","6 LPA","Late Narasimha murthy ","Rtd head constable","7760258251","Ittigi Huvinahadagali taluk ","Jayashri","Retd Head Mistress ","7259544858","Ittigi ","Brothers"," #28, Venugopala layout, 3rd main 3rd cross, Vidyaranyapura last bus stop, Vidyaranyapura ","India","To India","6 feet","MBA in finance","Up to 5","No","Yes","Unmarried Only","India Only","Kannada Only","No Smoking or Drinking","Bengaluru","Any city in Karnataka is fine","https://drive.google.com/open?id=1YhD6gnawg8s61XcBOCzcnzkxNOSb3mSO|images/G20251212002_43.jpg","https://drive.google.com/open?id=1Qb1tUOx4ZZFC4w8lJg-ZLOJ5uQFv1jUy|images/G20251212002_44.jpg","https://drive.google.com/open?id=1xVwvVc48XliVVPFSiTUSd2ciatO542-F","I Agree","","","","","","","","","","","","",""],
+    ["G20251213001","12/13/2025 21:53:39","nagamanimd69@gmail.com","9740326495","Groom","Arun Kashyap","5/14/93","1:50:00 am","Doddaballapura ","Never Married","ಧನಿಷ್ಠ (Dhanishtha)","","ಕುಂಭ - Aquarius","Kashyapa","Smartha","ಶೃಂಗೇರಿ ","Masters","Private Sector","Team Leader at JP Morgan Chase & Co","13","Ramachandra M D","Retired ","9535398563","Motaganahalli","Shantha","Home maker","7829343212","Motaganahalli","Sisters","ITI layout,  Jp nagar phase 1, bangalore","India","To India","6","MBA","Up to 8","Maybe","Yes","Unmarried Only","India Only","Kannada Only","No Smoking or Drinking","Bengaluru","Any city in Karnataka is fine","https://drive.google.com/open?id=1krRITldpUvyP_oq6mQGsrWRvvjYfmxkb|images/G20251213001_43.jpg","https://drive.google.com/open?id=1CWg7SilH-pQ4PM9fsa3fF4SZi0TxHnGH|images/G20251213001_44.jpg","","I Agree","","","","","","","","","","","","",""],
+    ["G20251214001","12/14/2025 10:27:07","santucgcs@gmail.com","9739714623","Groom","ಸಂತೋಷ ","11/10/82","7:00:00 am","ಮೈಸೂರ್ ","Never Married","ಸ್ವಾತಿ (Swati)","","ತುಲಾ - Libra","Shandilya","Madhwa","ಉತ್ತರದಿ ","Degree","Private Sector","Datar distributors mondelez food India pvt ltd","3to 4lack","C s gopinath ","Superintendent ","9739714623","Bangalore ","Padmalatha ","House wife","9739714623","Shimoga ","Sisters","No 49 ad block 4th mn srirampura Bangalore ","India","To India","5.7","B.A","Up to 3","No","Yes","Unmarried Only","India Only","Kannada Only","Occasionally Yes","Bengaluru","Any city in Karnataka is fine","https://drive.google.com/open?id=1NeS3tAkkHKe3Y_cyKHum2xTZLg12nK5y|images/G20251214001_43.jpg","https://drive.google.com/open?id=1j2U0TBCZH34WsuTSU4RRzAhEVB4FL5YQ|images/G20251214001_44.jpg","","I Agree","","","","","","","","","","","","",""],
+    ["G20251216001","12/16/2025 16:58:29","natarajks28@gmail.com","9008710060","Groom","NITHIN KASHYAP ","10/10/98","3:38:00 am","SHIMOGA ","Never Married","ರೋಹಿಣಿ (Rohini)","","ವೃಷಭ - Taurus","Kashyapa","Smartha","Shankar mata","BE","IT","Clarivate  senior software developer ","19 lakh/year","NATARAJ ","Lecturer ","7349709235","Mysore ","CHAITHRA ","Home maker","7349709235","Shimoga ","Brothers","Mysore ","India","To India","5'11","BE","Up to 3","No","Yes","Unmarried Only","India Only","Any Language Is Fine","No Smoking or Drinking","Mysore ","Any city in Karnataka is fine","https://drive.google.com/open?id=1gDa-ib6gmtqbn5rFGmnlOLDn3J6c3KRg|images/G20251216001_43.jpg","https://drive.google.com/open?id=11IfOANfxLVOqb4QDU19L6NepPIF83mOo|images/G20251216001_44.jpg","","I Agree","","","","","","","","","","","","",""],
+    ["G20251216002","12/16/2025 16:58:48","venkateshshanbogh@gmail.com","8095608281","Groom","Venkatesha","10/28/94","10:15:00 pm","Sira","Never Married","ಆಶ್ಲೇಷ (Ashlesha)","","ಕರ್ಕಾಟಕ - Cancer","Gautama","Smartha","Shringeri","CA Inter","IT","XY Retail India Pvt Ltd and Finance Manager","15,00,000","Suresh","Farmer","7899523327","","Nagarathna","Home maker","9743101484","","Sisters","Giri Nagar, Bengaluru","India","To India","5'5","","Up to 7","Yes","Yes","Unmarried Only","India Only","Kannada Only","No Smoking or Drinking","Bengaluru","Any city in Karnataka is fine","https://drive.google.com/open?id=16U1HyDfmVjPkbLELB_bDI3lFv9ELXUwq|images/G20251216002_43.jpg","https://drive.google.com/open?id=1EsaLTWGtMDIhRFUdRH-5Lh8G3DTjD7HN|images/G20251216002_44.jpg","https://drive.google.com/open?id=1qfK1DLqSk4MGXfQY5AdVkf3AgaNEiBWj","I Agree","","","","","","","","","","","","",""],
+    ["G20260227001","2/27/2026 7:52:09","amarbsk@gmail.com","9740697661","Groom","Amar B A ","6/24/81","11:55:00 am","Bangalore ","Never Married","ಪುನರ್ವಸು (Punarvasu)","","ಕರ್ಕಾಟಕ - Cancer","Bharadvaja","Iyengar","Andavan ashram ","Masters","IT","Happiest Minds pvt ltd","25","Ambarish ","Passed away ","9740697661","Malasandra ","Shakunthala ","St govt teacher Rtd ","9740697661","Tuple Tamilnadu ","Sisters","Yelachenahalli JP Nagar ","India","To India","6'1","BCom + MBA","Up to 5","Yes","Yes","Unmarried Only","India Only","Any Language Is Fine","No Smoking or Drinking","Bengaluru","Any city in Karnataka is fine","https://drive.google.com/open?id=1mcuPOqCj8-xow6AJOsVl9jFAScLr_PJx|images/G20260227001_43.jpg","https://drive.google.com/open?id=1up2fErn_2-ZClxVPPT7yRENpx45x_FsW|images/G20260227001_44.jpg","https://drive.google.com/open?id=1cfICMDw1PheVozlGpWrDmw1C4CEwgryk","I Agree","","","","","","","","","","","","",""],
+    ["G20260227002","2/27/2026 18:30:06","sreelakshmigs1968@gmail.com","9740026806","Groom","Sagar S","2/17/93","9:24:00 am","Bhadravathi","Never Married","ಪೂರ್ವಾಷಾಢ (Purvashada)","","ಧನು - Sagittarius","Kashyapa","Smartha","Shankar mata","Degree","Own Business","Own business","8LPA","Sreedharananda S","Retired government teacher ","8105192540","Shettikere","Sreelakshmi GS","Clerk cum typest ","8105192540","Shivamogga","Sisters","\"Anugraha\" 1st main 4th cross vijayanagar, tumakuru","India","To India","5'8","BE, mechanical ","Up to 6","No","Yes","Unmarried Only","India Only","Kannada Only","No Smoking or Drinking","Tumakuru ","Any city in Karnataka is fine","https://drive.google.com/open?id=1ehgaH3QHax-AQfAL2beEF6E_wqqP3_rO|images/G20260227002_43.jpg","https://drive.google.com/open?id=1f499oiy4WcKiZca1ZzHnnGGiN2AkPSHX|images/G20260227002_44.jpg","https://drive.google.com/open?id=1XoJIkmuozi-xsr1QsHAlGLmU1ktcIoBb","I Agree","","","","","","","","","","","","",""],
+    ["G20260227003","2/27/2026 20:25:06","hemanth.kumar421996@gmail.com","9632050131","Groom","Hemanthakumara b m ","2/4/96","9:15:00 am","Bannangadi ","Never Married","ಪುಷ್ಯ (Pushya)","","ಕರ್ಕಾಟಕ - Cancer","Bharadvaja","Smartha","Sringeri ","Degree","Private Sector","Kluber lubrication india pvt Ltd - Production assistant ","3 to 4 ","Manjunatha B A (late)","Nill","9632175897","Bannangadi ","Vijayalakshmi ","House wife ","9632175897","Mullahalli","Sisters","Bannangadi v&p, pandavapura, t,  mandya, d, 571812","India","To India","5.1","BA","Up to 2","No","Yes","Unmarried Only","India Only","Kannada Only","No Smoking or Drinking","Bannangadi ","Any city in Karnataka is fine","https://drive.google.com/open?id=1scFWlbs5m9jRO3VFVDMB-ovmMhNM6hy4|images/G20260227003_43.jpg","https://drive.google.com/open?id=11Orj4_g5JvIfTh2s-DcnAQi4rGIe6sXc|images/G20260227003_44.jpg","https://drive.google.com/open?id=18ZfzETnwFjoFHKRxS2RfJnctpgTqx8-j","I Agree","","","","","","","","","","","","",""],
+    ["B20260301001","3/1/2026 20:16:27","sathyakirantsrao@gmail.com","7760532293","Bride","SATHYAKIRANA TS ","5/17/91","2:12:00 pm","Bengaluru ","Never Married","ಆರಿದ್ರಾ (Aridra)","ಮಿಥುನ - Gemini","Upamanyu vasista ","Smartha","Sringeri Shankara mata","Degree","IT","Laerdal LLP as senior Software Engineer","1500000","Sheshagiri Rao YS ","Expired ","7760532292","Tavarekere channagiri(Tq) Davangere(D)","Geethalakshmi YL ","House wife ","7760532292","Bengaluru","Brothers","Nagarabhavi Bengaluru Karnataka ","India","To India","5`10``","Bachelor of Engineering ","Up to 5","Maybe","Yes","Unmarried Only","India Only","Any Language Is Fine","No Smoking or Drinking","Bengaluru","Any city in Karnataka is fine","https://drive.google.com/open?id=1R2-8nSm1hwjvmK0hX4GXOW-5kp32U4CK","https://drive.google.com/open?id=1o-hx1jwjRdsqgsdx9FFIfN19P7b4sTnO|images/B20260301001_43.jpg","https://drive.google.com/open?id=1OQVzv_PjGYtUky8E8CiGr0r5bYszhMX8|images/B20260301001_44.jpg","I Agree"],
+    ["G20260301002","3/1/2026 20:17:23","jayasimha50@gmail.com","9886743350","Groom","Jayasimha Ramakrishna ","10/7/92","6:12:00 pm","Tumkuru","Never Married","ಧನಿಷ್ಠ (Dhanishtha)","ಕುಂಭ - Aquarius","Kashyapa","Smartha","Sringeri","Masters","IT","CGI ","6","Ramakrishna N ","Retired govt official ","8553566430","Tumkur","Shantha R","Educated ","9738550334","Chitradurga ","Brothers","Tumkur 572102","India","To India","5.8","M.C.A ","Up to 4","Maybe","Yes","Unmarried Only","Will be Back in India","Any Language Is Fine","No Smoking or Drinking","Tumakuru ","Any city in Karnataka is fine","https://drive.google.com/open?id=12h1Q_42w1TyTD8stduXlYJkp3-jt5BIS","https://drive.google.com/open?id=1_Nf4fJm162l-I6jALHWFH0mN0sqiNriO|images/G20260301002_43.jpg","https://drive.google.com/open?id=1wTWYaltn7KgwYkrdnQLRXEkV2A76Db7K|images/G20260301002_44.jpg","I Agree"],
+    ["3/1/2026 21:01:49","bhavapadma@gmail.com","98454 62349 ","Groom","Nikhil Udupa.N ","2/21/98","2:20:00 pm","Koppa","Never Married","ಜ್ಯೇಷ್ಠಾ (Jyeshtha)","ವೃಶ್ಚಿಕ - Scorpio","Vishvamitra","Smartha","Balekudru -Hangarukatte ","Degree","Private Sector","Onward Technologies Whitefield,  FEA Engineer ","11","Niranjan TP ","Electrical business ","98454 62349 ","Tirthahalli, Shimoga district ","Lalitha.N","Home maker ","9448228588","Koppa,Chikkamagalur dist","No Siblings","Flat no.102, Annapoorna apartments, 3rd cross, Church road, New thippasandra, HAL 3rd stage, Bengaluru-560075 ","India","To India","5'6","B tech Mechanical engineering ","Up to 4","No","Maybe","Unmarried Only","India Only","Kannada Only","No Smoking or Drinking","Bengaluru","only Bengaluru","https://drive.google.com/open?id=1pBt6bA-RoBU5D2PotwxBhCtiT7gzIcVJ","https://drive.google.com/open?id=1G3b2IrWmQX_lLnu4D4aG3LMhZGc11nHg","https://drive.google.com/open?id=1kVoUOV8uKK4Wk3x0o-Pwm8YMxwaWdvS7|images/3_1_2026_21_01_49_43.jpg","I Agree"],
+    ["3/1/2026 21:35:11","ramamanikn14@gmail.com","9945284432","Bride","Bhargavi BN","1/15/99","2:34:00 am","Bangalore ","Never Married","ಜ್ಯೇಷ್ಠಾ (Jyeshtha)","ವೃಶ್ಚಿಕ - Scorpio","Gautama","Smartha","Shankara mata","Degree","CS pursuing ","Not yet working ","Not yet working ","Nagesh BR","Retired","8105914648","Bangalore ","Ramamani KN","House wife","9945284432","Bangalore ","Brothers","Jp 7th phase Bangalore ","India","To India","5'3","B.Com","Up to 5","No","Maybe","Unmarried Only","Can move to Abroad","Kannada Only","No Smoking or Drinking","Bengaluru","only Bengaluru","https://drive.google.com/open?id=1DtvtJb-MV6JoWq0LKhjTldxGnfBW4Mha","https://drive.google.com/open?id=1l3kbvSbF1hMW3Mpu6x8rg96vTS4LlvQd","https://drive.google.com/open?id=1DDHbrsQOsDn1uIy2tMCnAH0fXCz7kw2m|images/3_1_2026_21_35_11_43.jpg","I Agree"],
+    ["3/1/2026 23:13:46","madhuramadhu4771@gmail.com","9845536850","Bride","Dushyanth","8/22/86","11:45:00 am","Banglore","Never Married","ಉತ್ತರಭಾದ್ರಪದ (Uttara Bhadrapada)","ಮೀನ - Pisces","Atri","Smartha","Shankara mata","Degree","Freelance musician","Keyboard artist","70,000","G. s ravikumar","Retired ksdl employee","9845814848","Kundapura","V madhura","Music teacher","9964605604","Banglore","No Siblings","#249, 6th main Gururaja layout behind vidyapeetha  banglore 560028","India","To India","5.7","Bcom","Up to 5","Maybe","Yes","Unmarried Only","India Only","Kannada Only","No Smoking or Drinking","Bengaluru","only Bengaluru","https://drive.google.com/open?id=1BZUtvPV3AvbVUxs1cSdGmhKkJT_43cqh","https://drive.google.com/open?id=1RXUyOBiMTBMyY2qg9-mlBmMI5Alg80et","https://drive.google.com/open?id=1jiFccfJq2W6b0z990G_vEJTCdvU21SXV|images/3_1_2026_23_13_46_43.jpg","I Agree"],
+    ["3/9/2026 10:55:47","maladatta1992@gmail.com","9242864725","Bride","Dr.AMRUTHAVARSHINI","6/16/97","2:47:00 pm","Bengaluru ","Never Married","ಸ್ವಾತಿ (Swati)","ತುಲಾ - Libra","Gautama","Smartha","Shankaramatha","Masters, DOCTOR - MEDICINE","STUDYING IN RIMS, RAICHUR","STUDYING","STIPEND","K DATTACHAITANYA","RETIRED ","9538998177","BENGALURU","V S VYJAYANTHIMALA","HOME MAKER","9538998177","GAURIBIDANUR","Brothers","711, 66TH CROSS, KUMARASWAMY LAYOUT 1ST STAGE,  BANGALORE 560111","India","To India","5'4\"","MBBS , PERSUING 3RD YEAR MS IN GENERAL SURGERY (COMPLETING BY SEPT 2026)","Up to 3","No","Maybe","Unmarried Only","India Only","Any Language Is Fine","No Smoking or Drinking","Bengaluru","Any city in Karnataka is fine","https://drive.google.com/open?id=1tQ5d3oJhT6R84zuZgU72WaDdMeuYyDnZ","https://drive.google.com/open?id=1jugcddOMEUTogeqruYKV5NJ_NxC7ngxx","https://drive.google.com/open?id=1mYUSkQK2vLFhxb3DYieAOepdx9eRcZsr|images/3_9_2026_10_55_47_43.jpg","I Agree"]];
+    const PHOTO_INDICES   = [44, 45];
+    const EXCLUDED_INDICES = [0,1,2,3,4,19,22,26,29,47];
+    const HOROSCOPE_INDEX  = 46;
+    const TYPE_INDEX       = 4;
+    const cols             = db[0];
 
-    const getColIndex = (name) => cols.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
+    // Admin storage (in-memory)
+    const adminNotes    = {};
+    let currentRole     = 'customer';
+    let currentFilter   = 'all';
+    let compareSelected = new Set();
+    let compareTableIds = []; // for new compare table
+    let currentDetailIdx = null;
+    let detailOrigin = 'gallery'; // 'gallery' or 'myProfile'
+    let currentUser     = null; // { role, name, email, uid (customer only) }
 
-    let currentFilter = 'all';
+    // ── CREDENTIALS (demo — in production use a backend) ──
+    const ADMIN_CREDENTIALS = { username: 'admin', password: 'admin123' };
+    // Customer credentials are matched against the db email + a stored password
+    // For demo: password = last 4 digits of phone number
+    function getCustomerPassword(email) {
+      const row = db.find((r, i) => i > 0 && (r[2] || '').toLowerCase() === email.toLowerCase());
+      if (!row) return null;
+      const phone = (row[3] || '').replace(/\D/g,'');
+      return phone.slice(-4); // last 4 digits of phone as default password
+    }
 
-    // Connectivity Status Handler
-    function updateStatus() {
-        const statusDiv = document.getElementById('connection-status');
-        if (navigator.onLine) {
-            statusDiv.innerHTML = "● Online";
-            statusDiv.className = "online-dot";
-        } else {
-            statusDiv.innerHTML = "● Offline Mode";
-            statusDiv.className = "offline-dot";
+    // ═══════════════════════════════════════════
+    //  AUTH
+    // ═══════════════════════════════════════════
+    function switchLoginTab(tab) {
+      document.getElementById('loginTabCustomer').classList.toggle('active', tab === 'customer');
+      document.getElementById('loginTabAdmin').classList.toggle('active', tab === 'admin');
+      document.getElementById('loginFormCustomer').style.display = tab === 'customer' ? '' : 'none';
+      document.getElementById('loginFormAdmin').style.display    = tab === 'admin'    ? '' : 'none';
+    }
+
+    function loginCustomer() {
+      const email = (document.getElementById('custEmail').value || '').trim().toLowerCase();
+      const pass  = (document.getElementById('custPassword').value || '').trim();
+      const errEl = document.getElementById('custError');
+      errEl.style.display = 'none';
+
+      const rowIdx = db.findIndex((r, i) => i > 0 && (r[2] || '').toLowerCase() === email);
+      if (rowIdx < 0) { showLoginError('custError', 'No profile found with this email.'); return; }
+
+      const expected = getCustomerPassword(email);
+      if (pass !== expected) { showLoginError('custError', 'Incorrect password. (Hint: last 4 digits of your phone number)'); return; }
+
+      const row = db[rowIdx];
+      currentUser = { role: 'customer', name: row[5] || 'Customer', email, uid: row[0], dbIdx: rowIdx };
+      saveSession();
+      bootApp();
+    }
+
+    function loginAdmin() {
+      const username = (document.getElementById('adminUsername').value || '').trim();
+      const pass     = (document.getElementById('adminPassword').value || '').trim();
+      if (username !== ADMIN_CREDENTIALS.username || pass !== ADMIN_CREDENTIALS.password) {
+        showLoginError('adminError', 'Invalid admin credentials.'); return;
+      }
+      currentUser = { role: 'admin', name: 'Administrator' };
+      saveSession();
+      bootApp();
+    }
+
+    function showLoginError(elId, msg) {
+      const el = document.getElementById(elId);
+      el.textContent = msg; el.style.display = 'block';
+    }
+
+    function saveSession() {
+      try { localStorage.setItem('km_session', JSON.stringify(currentUser)); } catch(e) {}
+    }
+
+    function loadSession() {
+      try {
+        const s = localStorage.getItem('km_session');
+        if (s) { currentUser = JSON.parse(s); return true; }
+      } catch(e) {}
+      return false;
+    }
+
+    function logout() {
+      try { localStorage.removeItem('km_session'); } catch(e) {}
+      currentUser = null;
+      location.reload();
+    }
+
+    function bootApp() {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('topBar').style.display = '';
+      document.getElementById('mainHeader').style.display = '';
+      document.getElementById('navTabs').style.display = '';
+
+      const isAdmin = currentUser.role === 'admin';
+      currentRole = currentUser.role;
+      document.body.classList.toggle('admin-mode', isAdmin);
+      document.body.classList.toggle('customer-mode', !isAdmin);
+
+      document.getElementById('topBarName').textContent = currentUser.name;
+
+      initGallery();
+      applyProfileOverrides();
+      populateGunaSelects();
+      populateCompareSelect();
+      if (!isAdmin) renderMyProfile();
+    }
+
+    // ═══════════════════════════════════════════
+    //  VISITED PROFILES (stored in localStorage)
+    // ═══════════════════════════════════════════
+    function getVisitedKey() { return `km_visited_${currentUser?.uid || ''}`; }
+
+    function recordVisit(idx) {
+      if (!currentUser || currentUser.role !== 'customer') return;
+      const uid = db[idx][0];
+      if (uid === currentUser.uid) return; // don't record own profile
+      try {
+        const key = getVisitedKey();
+        let visited = JSON.parse(localStorage.getItem(key) || '[]');
+        visited = visited.filter(v => v.uid !== uid); // remove old entry if exists
+        visited.unshift({ uid, idx, name: db[idx][5] || 'Unknown', time: Date.now() });
+        visited = visited.slice(0, 50); // keep last 50
+        localStorage.setItem(key, JSON.stringify(visited));
+      } catch(e) {}
+    }
+
+    function getVisited() {
+      try {
+        return JSON.parse(localStorage.getItem(getVisitedKey()) || '[]');
+      } catch(e) { return []; }
+    }
+
+    // ═══════════════════════════════════════════
+    //  MY PROFILE PAGE
+    // ═══════════════════════════════════════════
+    function renderMyProfile() {
+      if (!currentUser || currentUser.role !== 'customer') return;
+      const idx = currentUser.dbIdx;
+      const row = db[idx];
+      const uid = row[0];
+      const name = row[5] || 'Unknown';
+      const typeVal = (row[4] || '').toLowerCase();
+      const isGroom = typeVal.includes('groom');
+      const age = calcAge(row[6] || '');
+      const photoUrl = getPhotoUrl(row[PHOTO_INDICES[0]]);
+      const photoLocal = getLocalUrl(row[PHOTO_INDICES[0]]);
+      const registered = formatDate((row[1] || '').split(' ')[0]);
+
+      const avatarHtml = photoUrl
+        ? `<img class="my-profile-avatar" src="${photoUrl}" onerror="this.onerror=null;this.src='${photoLocal||''}'" alt="">`
+        : `<div class="my-profile-avatar-placeholder"><span class="material-symbols-outlined">person</span></div>`;
+
+      const visited = getVisited();
+      const visitedHtml = visited.length === 0
+        ? `<div class="visited-empty"><span class="material-symbols-outlined">visibility_off</span>No profiles visited yet.</div>`
+        : visited.map(v => {
+            const vIdx = db.findIndex((r, i) => i > 0 && r[0] === v.uid);
+            const vRow = vIdx > 0 ? db[vIdx] : null;
+            const vPhoto = vRow ? getPhotoUrl(vRow[PHOTO_INDICES[0]]) : null;
+            const vLocal = vRow ? getLocalUrl(vRow[PHOTO_INDICES[0]]) : null;
+            const vType = vRow ? (vRow[4] || '').toLowerCase() : '';
+            const dotColor = vType.includes('groom') ? 'var(--groom)' : vType.includes('bride') ? 'var(--bride)' : '#999';
+            const timeAgo = formatTimeAgo(v.time);
+            const photoEl = vPhoto
+              ? `<img class="visited-card-photo" src="${vPhoto}" onerror="this.onerror=null;this.src='${vLocal||''}'" alt="">`
+              : `<div class="visited-card-photo-placeholder"><span class="material-symbols-outlined">person</span></div>`;
+            return `<div class="visited-card" onclick="showDetail(${vIdx}, 'myProfile')">
+              <div class="visited-card-dot" style="background:${dotColor}"></div>
+              ${photoEl}
+              <div class="visited-card-name">${v.name}</div>
+              <div class="visited-card-id">${v.uid}</div>
+              <div class="visited-card-time">${timeAgo}</div>
+            </div>`;
+          }).join('');
+
+      document.getElementById('myProfileContent').innerHTML = `
+        <div class="my-profile-hero">
+          ${avatarHtml}
+          <div class="my-profile-info">
+            <div class="my-profile-name">${name}</div>
+            <div class="my-profile-id">${uid}</div>
+            <div class="my-profile-meta">${isGroom ? 'Groom' : 'Bride'}${age ? ' · ' + age + ' years' : ''} · Registered: ${registered}</div>
+          </div>
+        </div>
+
+        <div style="background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:24px 28px;margin-bottom:24px;box-shadow:var(--card-shadow)">
+          <div class="my-profile-section-title">My Details</div>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px">View or update your profile information.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <button onclick="showDetail(${idx}, 'myProfile')" style="padding:11px 24px;background:var(--deep);color:var(--gold-light);border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">
+              View Full Profile →
+            </button>
+            <button onclick="openEditProfile()" style="padding:11px 24px;background:var(--gold);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px">
+              <span class="material-symbols-outlined" style="font-size:15px">edit</span> Edit Profile
+            </button>
+          </div>
+        </div>
+
+        <div style="background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:24px 28px;box-shadow:var(--card-shadow)">
+          <div class="my-profile-section-title">Recently Visited Profiles</div>
+          <div class="visited-grid">${visitedHtml}</div>
+        </div>
+      `;
+    }
+
+    function formatTimeAgo(ts) {
+      const diff = Date.now() - ts;
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'Just now';
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs}h ago`;
+      return `${Math.floor(hrs/24)}d ago`;
+    }
+
+    // ═══════════════════════════════════════════
+    //  EDIT PROFILE (customer)
+    // ═══════════════════════════════════════════
+    // Fields customers can edit, grouped by section
+    const EDIT_SECTIONS = [
+      { title: 'Personal', fields: [
+        { idx:5,  label:'Name' },
+        { idx:6,  label:'Date of Birth', hint:'e.g. 5/29/97' },
+        { idx:7,  label:'Time of Birth' },
+        { idx:8,  label:'Place of Birth' },
+        { idx:9,  label:'Marital Status' },
+        { idx:10, label:'Nakshatra' },
+        { idx:11, label:'Charana' },
+        { idx:12, label:'Rashi' },
+        { idx:13, label:'Gothra' },
+        { idx:14, label:'Sub Caste' },
+        { idx:15, label:'Mata (ಮಠ)' },
+        { idx:32, label:'Height' },
+      ]},
+      { title: 'Professional', fields: [
+        { idx:16, label:'Education' },
+        { idx:17, label:'Work Field' },
+        { idx:18, label:'Company / Role', wide:true },
+        { idx:33, label:'Degrees / Qualifications', wide:true },
+      ]},
+      { title: 'Family', fields: [
+        { idx:20, label:"Father's Name" },
+        { idx:21, label:"Father's Occupation" },
+        { idx:23, label:"Father's Native" },
+        { idx:24, label:"Mother's Name" },
+        { idx:25, label:"Mother's Occupation" },
+        { idx:27, label:"Mother's Native" },
+        { idx:28, label:'Siblings' },
+        { idx:30, label:'Staying In' },
+        { idx:31, label:'Planning to Relocate' },
+      ]},
+      { title: 'Preferences', fields: [
+        { idx:34, label:'Preferred Age Gap' },
+        { idx:35, label:'Same Gothra OK?' },
+        { idx:36, label:'Any Brahmin / Mata OK?' },
+        { idx:37, label:'Required Marital Status' },
+        { idx:38, label:'Abroad Relocation' },
+        { idx:39, label:'Language Preference' },
+        { idx:40, label:'Habits' },
+        { idx:41, label:'City (if not Bengaluru)', wide:true },
+        { idx:42, label:'Local Relocation' },
+        { idx:43, label:'Other Habits' },
+      ]},
+    ];
+
+    // Load any saved overrides from localStorage
+    function loadProfileOverrides(uid) {
+      try { return JSON.parse(localStorage.getItem(`km_edit_${uid}`) || '{}'); } catch(e) { return {}; }
+    }
+    function saveProfileOverrides(uid, overrides) {
+      try { localStorage.setItem(`km_edit_${uid}`, JSON.stringify(overrides)); } catch(e) {}
+    }
+
+    // Apply saved overrides onto db row (called at boot and after save)
+    function applyProfileOverrides() {
+      if (!currentUser || currentUser.role !== 'customer') return;
+      const idx = currentUser.dbIdx;
+      const uid = db[idx][0];
+      const overrides = loadProfileOverrides(uid);
+      for (const [colIdx, val] of Object.entries(overrides)) {
+        db[idx][parseInt(colIdx)] = val;
+      }
+    }
+
+    function openEditProfile() {
+      if (!currentUser || currentUser.role !== 'customer') return;
+      const idx = currentUser.dbIdx;
+      const row = db[idx];
+      const uid = row[0];
+      const overrides = loadProfileOverrides(uid);
+
+      let bodyHtml = '';
+      for (const section of EDIT_SECTIONS) {
+        bodyHtml += `<div class="edit-section-title">${section.title}</div><div class="edit-grid">`;
+        for (const f of section.fields) {
+          const val = (overrides[f.idx] !== undefined ? overrides[f.idx] : row[f.idx] || '');
+          const wideClass = f.wide ? ' full-width' : '';
+          bodyHtml += `<div class="edit-field${wideClass}">
+            <label class="edit-label">${f.label}</label>
+            <input class="edit-input" data-idx="${f.idx}" value="${val.replace(/"/g,'&quot;')}"
+              placeholder="${f.hint || ''}" type="text">
+          </div>`;
         }
-    }
-    window.addEventListener('online', updateStatus);
-    window.addEventListener('offline', updateStatus);
-    updateStatus();
+        bodyHtml += `</div>`;
+      }
 
-    function filterType(type) {
-        currentFilter = type;
-        document.querySelectorAll('.stat-item').forEach(el => el.classList.remove('active-filter'));
-        if(type === 'all') document.getElementById('btnAll').classList.add('active-filter');
-        else if(type === 'groom') document.getElementById('btnGroom').classList.add('active-filter');
-        else if(type === 'bride') document.getElementById('btnBride').classList.add('active-filter');
-        search();
+      document.getElementById('editModalBody').innerHTML = bodyHtml;
+      document.getElementById('editSavedMsg').style.display = 'none';
+      document.getElementById('editProfileModal').classList.add('open');
+      document.body.style.overflow = 'hidden';
     }
 
-    function formatDate(dateStr) {
-    if (!dateStr || dateStr.length < 5) return "N/A";
-
-    const parts = dateStr.split(/[\/\-]/);
-    if (parts.length !== 3) return dateStr;
-
-    let month = parts[0].padStart(2, '0');
-    let day = parts[1].padStart(2, '0');
-    let year = parts[2];
-
-    if (year.length === 2) {
-        year = (parseInt(year) > 40 ? "19" : "20") + year;
+    function closeEditProfile() {
+      document.getElementById('editProfileModal').classList.remove('open');
+      document.body.style.overflow = '';
     }
 
-    return `${day}-${month}-${year}`;
-}
+    function saveEditProfile() {
+      if (!currentUser || currentUser.role !== 'customer') return;
+      const idx = currentUser.dbIdx;
+      const uid = db[idx][0];
+      const overrides = loadProfileOverrides(uid);
+
+      document.querySelectorAll('#editModalBody .edit-input').forEach(input => {
+        const colIdx = parseInt(input.dataset.idx);
+        overrides[colIdx] = input.value;
+        db[idx][colIdx] = input.value; // update in-memory db immediately
+      });
+
+      saveProfileOverrides(uid, overrides);
+
+      // Update currentUser name if name field changed
+      currentUser.name = db[idx][5] || currentUser.name;
+      saveSession();
+      document.getElementById('topBarName').textContent = currentUser.name;
+
+      const msg = document.getElementById('editSavedMsg');
+      msg.style.display = 'block';
+      setTimeout(() => { closeEditProfile(); renderMyProfile(); }, 1200);
+    }
+
+    // ═══════════════════════════════════════════
+    //  HELPERS
+    // ═══════════════════════════════════════════
+    const getColIndex = name => cols.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
+
+    function formatDate(d) {
+      if (!d || d.length < 5) return 'N/A';
+      const p = d.split(/[\/\-]/);
+      if (p.length !== 3) return d;
+      let [m, day, y] = p;
+      m = m.padStart(2,'0'); day = day.padStart(2,'0');
+      if (y.length === 2) y = (parseInt(y) > 40 ? '19' : '20') + y;
+      return `${day}-${m}-${y}`;
+    }
+
+    function calcAge(dobStr) {
+      if (!dobStr || dobStr.length < 5) return '';
+      const parts = dobStr.split(/[\/\-]/);
+      if (parts.length !== 3) return '';
+      let [m, d, y] = parts;
+      if (y.length === 2) y = (parseInt(y) > 40 ? '19' : '20') + y;
+      const dob = new Date(y, m-1, d);
+      const diff = Date.now() - dob.getTime();
+      return Math.floor(diff / (365.25*24*3600*1000));
+    }
+
+    function getPhotoUrl(raw) {
+      if (!raw || raw.length < 5) return null;
+      const [remoteUrl] = raw.split('|');
+      if (remoteUrl.includes('drive.google.com')) {
+        const id = remoteUrl.match(/[-\w]{25,}/);
+        if (id) return `https://drive.google.com/thumbnail?id=${id[0]}&sz=s200`;
+      }
+      return remoteUrl;
+    }
+
+    function getLocalUrl(raw) {
+      if (!raw) return null;
+      const parts = raw.split('|');
+      return parts[1] || null;
+    }
+
+    function getUniqueId(row) { return row[0] || ''; }
+
+    function getExpiryStatus(uid) {
+      const data = adminNotes[uid];
+      if (!data || !data.expiry) return null;
+      const exp = new Date(data.expiry);
+      const now = new Date();
+      const diff = (exp - now) / (1000*3600*24);
+      if (diff < 0)  return { label: 'Expired', cls: 'expiry-expired' };
+      if (diff < 30) return { label: `Expires in ${Math.ceil(diff)}d`, cls: 'expiry-soon' };
+      return { label: `Active`, cls: 'expiry-ok' };
+    }
+
+    function ensureAdminData(uid) {
+      if (!adminNotes[uid]) adminNotes[uid] = { notes: '', suggested: [], expiry: '' };
+    }
+
+    // ═══════════════════════════════════════════
+    //  NAVIGATION
+    // ═══════════════════════════════════════════
+    function showPage(pageId, tabEl) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById(pageId).classList.add('active');
+      if (tabEl) tabEl.classList.add('active');
+      document.getElementById('detailView').style.display = 'none';
+      if (pageId === 'myProfilePage') renderMyProfile();
+      window.scrollTo(0, 0);
+    }
+
+    // ═══════════════════════════════════════════
+    //  GALLERY
+    // ═══════════════════════════════════════════
+    const nameIdx    = getColIndex('Name');
+    const subCasteIdx= getColIndex('Sub Caste');
+    const eduIdx     = getColIndex('Education');
+    const gothraIdx  = getColIndex('Gothra');
+    const cityIdx    = getColIndex('If currently not staying');
+    const jobIdx     = getColIndex('Currently Working-In');
+    const dobIdx     = getColIndex('Date Of Birth');
+    const heightIdx  = getColIndex('Height');
+    const rashiIdx   = getColIndex('Rashi');
+    const nakshatraIdx = getColIndex('Nakshatra');
+    const stayingIdx = getColIndex('Staying In');
 
     function initGallery() {
-    let container = document.getElementById('cardContainer');
+      const container = document.getElementById('cardContainer');
+      const isCustomer = currentUser && currentUser.role === 'customer';
+      const isAdmin    = currentUser && currentUser.role === 'admin';
 
-    // 1. Get the column indices (renamed to end with 'Idx' for clarity)
-    const nameIdx = getColIndex("Name");
-    const subCasteIdx = getColIndex("Sub Caste");
-    const eduIdx = getColIndex("Education"); // Added missing semicolon
-    const gothraIdx = getColIndex("Gothra");
-    const cityIdx = getColIndex("If currently not staying in Bengaluru Please mention the city");
-    const jobIdx = getColIndex("Currently Working-In(Company Name) and As(Position)");
-    const dobIdx = getColIndex("Date of birth");
+      // For customers: determine their type to show only opposite
+      let customerType = null;
+      if (isCustomer) {
+        const myRow = db[currentUser.dbIdx];
+        const myType = (myRow[TYPE_INDEX] || '').toLowerCase();
+        customerType = myType.includes('groom') ? 'groom' : 'bride';
+      }
+      const showOpposite = customerType === 'groom' ? 'bride' : 'groom';
 
-    let html = '';
-    let grooms = 0, brides = 0;
+      // Hide/show filter pills — customers don't need them (handled via CSS admin-only-pills)
 
-    for (let i = 1; i < db.length; i++) {
-        let row = db[i];
+      let html = ''; let grooms = 0, brides = 0;
 
-        // 2. Extract values using the indices
-        let name = row[nameIdx] || "No Name";
-        let subCasteVal = row[subCasteIdx] || "N/A";
-        let gothraVal = row[gothraIdx] || "N/A";
-        let eduVal = row[eduIdx] || "Unknown";
-        let jobVal = row[jobIdx] || "Not Specified";
-        let cityVal = row[cityIdx] || "Unknown";
-        let dobVal = row[dobIdx] || "Unknown";
-        let formattedDob = formatDate(dobVal);
+      for (let i = 1; i < db.length; i++) {
+        const row = db[i];
+        const uid = getUniqueId(row);
 
+        // Skip own profile for customers
+        if (isCustomer && uid === currentUser.uid) continue;
+
+        const typeVal = (row[TYPE_INDEX] || '').toLowerCase();
         let typeClass = 'none';
-        if(TYPE_INDEX !== -1 && row[TYPE_INDEX]) {
-            let val = row[TYPE_INDEX].toLowerCase();
-            if(val.includes('groom')) { typeClass = 'groom'; grooms++; }
-            else if(val.includes('bride')) { typeClass = 'bride'; brides++; }
-        }
+        if (typeVal.includes('groom')) { typeClass = 'groom'; grooms++; }
+        else if (typeVal.includes('bride')) { typeClass = 'bride'; brides++; }
 
-        // 3. Build the card HTML
+        // Customers only see opposite gender
+        if (isCustomer && typeClass !== showOpposite) continue;
+
+        const name = row[nameIdx] || 'No Name';
+        const subCaste = row[subCasteIdx] || '';
+        const gothra = row[gothraIdx] || '';
+        const edu = row[eduIdx] || '';
+        const job = row[jobIdx] || '';
+        const city = row[cityIdx] || (row[stayingIdx] || '');
+        const dob = row[dobIdx] || '';
+        const age = calcAge(dob);
+        const height = row[heightIdx] || '';
+        const photoRaw = row[PHOTO_INDICES[0]];
+        const photoUrl = getPhotoUrl(photoRaw);
+        const localUrl = getLocalUrl(photoRaw);
+
+        const expiry = getExpiryStatus(uid);
+        const expiryHtml = expiry ? `<span class="expiry-badge ${expiry.cls}">${expiry.label}</span>` : '';
+
+        const photoHtml = photoUrl
+          ? `<img class="card-photo" src="${photoUrl}" onerror="this.onerror=null;this.src='${localUrl||''}'" alt="${name}">`
+          : `<div class="card-photo-placeholder"><span class="material-symbols-outlined">person</span></div>`;
+
         html += `
-            <div class="card card-${typeClass}" data-type="${typeClass}" onclick="showDetail(${i})">
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom:8px;">
-                    <h3>${name}</h3>
-                    <span style="background: rgba(0,0,0,0.06); padding: 3px 10px; border-radius: 15px; font-size: 0.95em; font-weight: bold;">
-                        ${subCasteVal}
-                    </span>
-                </div>
-                <p><span class="material-symbols-outlined">groups</span> ${gothraVal}</p>
-                <p><span class="material-symbols-outlined">date_range</span> ${formattedDob}</p>
-                <div style="margin-top: 10px; border-top: 1px solid #f0f0f0; padding-top: 10px;">
-                    <p><span class="material-symbols-outlined">work</span> ${jobVal}</p>
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 5px; color: #666; font-size: 0.85em;">
-                <p style="margin: 0; display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                    <span class="material-symbols-outlined" style="font-size: 25px;">school</span> ${eduVal}
-                </p>
-                <p style="margin: 0; display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
-                    <span class="material-symbols-outlined" style="font-size: 25px;">location_on</span> ${cityVal}
-                </p>
+        <div class="card card-${typeClass}" data-type="${typeClass}" data-idx="${i}" onclick="showDetail(${i})">
+          <div class="card-stripe"></div>
+          <div class="card-body">
+            <div class="card-top">
+              ${photoHtml}
+              <div class="card-name-block">
+                <div class="card-name">${name}</div>
+                <span class="card-type-badge badge-${typeClass}">${typeClass}</span>
+              </div>
             </div>
-        </div>
-            </div>`;
+            <div class="card-tags">
+              ${subCaste ? `<span class="tag">${subCaste}</span>` : ''}
+              ${gothra   ? `<span class="tag">${gothra}</span>` : ''}
+              ${age      ? `<span class="tag">${age} yrs</span>` : ''}
+              ${height   ? `<span class="tag">${height}</span>` : ''}
+            </div>
+            <div class="card-info">
+              ${job  ? `<div class="card-info-row"><span class="material-symbols-outlined">work</span>${job}</div>` : ''}
+              ${edu  ? `<div class="card-info-row"><span class="material-symbols-outlined">school</span>${edu}</div>` : ''}
+              ${city ? `<div class="card-info-row"><span class="material-symbols-outlined">location_on</span>${city}</div>` : ''}
+            </div>
+          </div>
+          ${expiryHtml}
+        </div>`;
+      }
+
+      container.innerHTML = html;
+      document.getElementById('pillGroom').textContent = `Grooms: ${grooms}`;
+      document.getElementById('pillBride').textContent = `Brides: ${brides}`;
+      applyFilters();
     }
 
-    container.innerHTML = html;
-    document.getElementById('btnGroom').innerText = `Grooms: ${grooms}`;
-    document.getElementById('btnBride').innerText = `Brides: ${brides}`;
-}
+    function filterType(type) {
+      currentFilter = type;
+      document.getElementById('pillAll').className   = 'pill' + (type==='all'   ? ' active-all'   : '');
+      document.getElementById('pillGroom').className = 'pill' + (type==='groom' ? ' active-groom' : '');
+      document.getElementById('pillBride').className = 'pill' + (type==='bride' ? ' active-bride' : '');
+      applyFilters();
+    }
 
-    function showDetail(idx) {
-        const row = db[idx];
-        let h = '<div onclick="showGallery()" style="color:#2196F3; cursor:pointer; font-weight:bold; margin-bottom:20px; display:flex; align-items:center; gap:5px;"><span class="material-symbols-outlined">arrow_back</span> Back</div>';
+    function doSearch() { applyFilters(); }
 
-        // Media Grid Logic with Fallback
-        h += '<div class="media-grid">';
-        PHOTO_INDICES.forEach(pIdx => {
-            let rawData = row[pIdx];
-            if(!rawData || rawData.length < 5) return;
+    function applyFilters() {
+      const val = (document.getElementById('search').value || '').toLowerCase();
+      const isCustomer = currentUser && currentUser.role === 'customer';
+      document.querySelectorAll('.card').forEach(c => {
+        const matchSearch = c.innerText.toLowerCase().includes(val);
+        const matchFilter = currentFilter === 'all' || c.dataset.type === currentFilter;
+        // Customers: cards are already rendered only for opposite gender, just apply search
+        c.style.display = (matchSearch && (isCustomer || matchFilter)) ? '' : 'none';
+      });
+    }
 
-            let [remoteUrl, localUrl] = rawData.split('|');
+    // ═══════════════════════════════════════════
+    //  DETAIL VIEW
+    // ═══════════════════════════════════════════
+    const SECTION_MAP = {
+      'Personal': ['Name','Date Of Birth','Time Of Birth','Place of Birth','Marital Status','Nakshatra','Charana','Rashi','Gothra','Sub Caste','ಮಠ - Mata','Height'],
+      'Professional': ['Education','Work Field','Currently Working-In','Mention your degrees'],
+      'Family': ["Father's Name","Father's Native","Mother's Name","Mother's Native",'Occupation','Siblings','Staying In','Planning To Relocate'],
+      'Preferences': ['Age Gap','Will agree on Same Gothra','Will agree on any Bhramins','Required Martial Status','Abroad Relocation','Language Preference','Local Relocation','Habits','If currently not staying'],
+    };
 
-            if(remoteUrl.includes('drive.google.com')) {
-                let id = remoteUrl.match(/[-\w]{25,}/);
-                if(id) remoteUrl = `https://drive.google.com/thumbnail?id=${id[0]}&sz=s0`;
-            }
+    function showDetail(idx, origin) {
+      currentDetailIdx = idx;
+      detailOrigin = origin || (document.getElementById('myProfilePage').classList.contains('active') ? 'myProfile' : 'gallery');
+      const backLabel = document.getElementById('backLabel');
+      if (backLabel) backLabel.textContent = detailOrigin === 'myProfile' ? 'Back to My Profile' : 'Back to Profiles';
+      recordVisit(idx);
+      const row = db[idx];
+      const name = row[nameIdx] || 'Unknown';
+      const typeVal = (row[TYPE_INDEX] || '').toLowerCase();
+      const isGroom = typeVal.includes('groom');
+      const isBride = typeVal.includes('bride');
+      const typeLabel = isGroom ? 'Groom' : isBride ? 'Bride' : '';
+      const typeBadgeCls = isGroom ? 'badge-groom' : 'badge-bride';
+      const age = calcAge(row[dobIdx] || '');
+      const uid = row[0];
+      ensureAdminData(uid);
+      const noteData = adminNotes[uid];
 
-            h += `<img src="${remoteUrl}"
-                       class="detail-card-img"
-                       onerror="this.onerror=null; this.src='${localUrl}';"
-                       onclick="event.stopPropagation(); openModal(this.src)">`;
-        });
-        h += '</div>';
+      // Collect photo URLs
+      const photoUrls = [];
+      PHOTO_INDICES.forEach(pIdx => {
+        const raw = row[pIdx];
+        const url = getPhotoUrl(raw);
+        const local = getLocalUrl(raw);
+        if (url) photoUrls.push({ url, local });
+      });
+      // Store for lightbox — use high-res Drive URL (sz=s1200) instead of thumbnail
+      _lbPhotos = photoUrls.map(p => ({
+        url: p.url.includes('drive.google.com/thumbnail')
+          ? p.url.replace('sz=s200', 'sz=s1200')
+          : p.url,
+        local: p.local
+      }));
 
-        if(HOROSCOPE_INDEX !== -1 && row[HOROSCOPE_INDEX] && row[HOROSCOPE_INDEX].length > 10) {
-            h += `<a href="${row[HOROSCOPE_INDEX]}" target="_blank" class="horoscope-btn" style="display:flex; align-items:center; justify-content:center; gap:10px;">
-                    <span class="material-symbols-outlined">description</span> View Horoscope
-                  </a>`;
+      // Lightbox thumbnail strip
+      let photosHtml = '';
+      if (photoUrls.length > 0) {
+        const thumbs = photoUrls.map((p, i) =>
+          `<img class="photo-thumb${i === 0 ? ' active' : ''}" src="${p.url}"
+            onerror="this.src='${p.local||''}'" alt=""
+            onclick="openLightbox(${i})">`
+        ).join('');
+        photosHtml = `<div class="photo-thumbs">${thumbs}</div>`;
+      }
+
+      // Horoscope button
+      const horoscopeRaw = row[HOROSCOPE_INDEX] || '';
+      const hasHoroscope = HOROSCOPE_INDEX !== -1 && horoscopeRaw.length > 10;
+      const horoscopeHtml = hasHoroscope
+        ? `<button class="horoscope-btn" onclick="openHoroscope('${horoscopeRaw.replace(/'/g,"\\'")}')">
+            <span class="material-symbols-outlined">description</span> View Horoscope
+           </button>` : '';
+      const createdDate = formatDate((row[1] || '').split(' ')[0]);
+      const expiryStatus = getExpiryStatus(uid);
+      const expiryText = noteData.expiry
+        ? `<span><span class="material-symbols-outlined">event</span>Expires: ${noteData.expiry}</span>`
+        : `<span><span class="material-symbols-outlined">event</span>No expiry set</span>`;
+
+      // Section fields — index-based to avoid ambiguity with duplicate column names
+      let sectionsHtml = '';
+      const assignedIndices = new Set([...PHOTO_INDICES, HOROSCOPE_INDEX, ...EXCLUDED_INDICES, 0,1,2,3,4]);
+
+      // Explicit index groups per section (based on known column layout)
+      const SECTION_INDICES = {
+        'Personal':      [5,6,7,8,9,10,11,12,13,14,15,32],   // Name→Height
+        'Professional':  [16,17,18,33],                        // Education→Degrees
+        'Family':        [20,21,23,24,25,27,28,30,31],         // Father/Mother/Siblings/Staying/Relocate
+        'Preferences':   [34,35,36,37,38,39,40,41,42,43],     // Age gap → Habits
+      };
+
+      // Build readable labels for duplicate columns
+      const LABEL_OVERRIDES = {
+        21: "Father's Occupation",
+        23: "Father's Native",
+        25: "Mother's Occupation",
+        27: "Mother's Native",
+      };
+
+      for (const [sectionTitle, indices] of Object.entries(SECTION_INDICES)) {
+        let fieldsHtml = '';
+        for (const i of indices) {
+          if (assignedIndices.has(i)) continue;
+          const label = LABEL_OVERRIDES[i] || cols[i];
+          if (!label) continue;
+          const val = (row[i] || '').trim();
+          if (!val || val === '-' || val === '#') continue;
+          const displayVal = i === 6 ? formatDate(val) : val; // index 6 = Date Of Birth
+          fieldsHtml += `<div class="detail-field">
+            <div class="detail-field-label">${label}</div>
+            <div class="detail-field-value">${displayVal}</div>
+          </div>`;
+          assignedIndices.add(i);
         }
-
-        // Data Rows
-        for(let i=0; i<cols.length; i++) {
-            if(PHOTO_INDICES.includes(i) || i === HOROSCOPE_INDEX || EXCLUDED_INDICES.includes(i)) continue;
-            let label = cols[i];
-            let val = row[i] ? row[i].trim() : "";
-            if (label.toLowerCase().includes("date of birth") || label.toLowerCase().includes("dob")) { val = formatDate(val); }
-            if(val !== "" && val !== "-" && val !== "#") {
-                h += `<div class="row"><div class="label">${cols[i]}</div><div class="value">${val}</div></div>`;
-            }
+        if (fieldsHtml) {
+          sectionsHtml += `<div class="detail-section">
+            <div class="detail-section-title">${sectionTitle}</div>
+            <div class="detail-grid">${fieldsHtml}</div>
+          </div>`;
         }
+      }
 
-        document.getElementById('detailView').innerHTML = h;
-        document.getElementById('galleryPage').style.display = 'none';
-        document.getElementById('detailView').style.display = 'block';
-        window.scrollTo(0,0);
+      // Any remaining fields
+      let remainingHtml = '';
+      for (let i = 0; i < cols.length; i++) {
+        if (assignedIndices.has(i)) continue;
+        const label = cols[i];
+        if (!label) continue;
+        const val = (row[i] || '').trim();
+        if (!val || val === '-' || val === '#') continue;
+        remainingHtml += `<div class="detail-field">
+          <div class="detail-field-label">${label}</div>
+          <div class="detail-field-value">${val}</div>
+        </div>`;
+      }
+      if (remainingHtml) {
+        sectionsHtml += `<div class="detail-section">
+          <div class="detail-section-title">Other Details</div>
+          <div class="detail-grid">${remainingHtml}</div>
+        </div>`;
+      }
+
+      // Suggested pills
+      const suggestedPills = (noteData.suggested || []).map(id =>
+        `<span class="suggested-pill" onclick="goToProfile('${id}')">
+          ${id}<span class="remove-pill" onclick="event.stopPropagation();removeSuggested('${uid}','${id}')">✕</span>
+        </span>`).join('');
+
+
+      const avatarUrl = getPhotoUrl(row[PHOTO_INDICES[0]]);
+      const avatarLocal = getLocalUrl(row[PHOTO_INDICES[0]]);
+      const avatarHtml = avatarUrl
+        ? `<img class="detail-avatar" src="${avatarUrl}" onerror="this.onerror=null;this.src='${avatarLocal||''}'" onclick="openModal(this.src)" alt="${name}">`
+        : `<div class="detail-avatar-placeholder"><span class="material-symbols-outlined">person</span></div>`;
+
+      document.getElementById('detailCard').innerHTML = `
+        <div class="detail-header">
+          ${avatarHtml}
+          <div class="detail-title">
+            <div class="detail-name">${name}</div>
+            <div class="detail-id">${uid}</div>
+            <span class="detail-type-badge ${typeBadgeCls}">${typeLabel}${age ? ' · ' + age + ' yrs' : ''}</span>
+          </div>
+        </div>
+
+        ${photosHtml}
+        ${horoscopeHtml}
+
+        <div class="profile-meta">
+          <span><span class="material-symbols-outlined">calendar_today</span>Registered: ${createdDate}</span>
+          ${expiryText}
+          ${expiryStatus ? `<span class="expiry-badge ${expiryStatus.cls}" style="display:inline-flex">${expiryStatus.label}</span>` : ''}
+        </div>
+
+        ${sectionsHtml}
+
+        <!-- Expiry Editor (admin only) -->
+        <div id="expiryEditor">
+          <span class="expiry-editor-label">Set Expiry Date:</span>
+          <input type="date" id="expiryInput" value="${noteData.expiry || ''}"
+            onchange="saveExpiry('${uid}')">
+        </div>
+
+        <!-- Admin Notes -->
+        <div id="adminNotesSection">
+          <div class="notes-title">Admin Notes</div>
+          <textarea id="adminNotes" placeholder="Add notes about this profile, suggested matches, remarks...">${noteData.notes || ''}</textarea>
+
+          <div class="suggested-profiles">
+            <div class="suggested-label">Suggested Profile IDs:</div>
+            <div class="suggested-pills" id="suggestedPills-${uid}">${suggestedPills}</div>
+            <div class="add-suggested">
+              <input type="text" id="suggestInput-${uid}" placeholder="e.g. G20251120001" maxlength="20">
+              <button class="btn-add-suggested" onclick="addSuggested('${uid}')">
+                <span class="material-symbols-outlined" style="font-size:14px">add</span> Add
+              </button>
+            </div>
+          </div>
+
+          <button class="btn-save-notes" onclick="saveNotes('${uid}')">
+            <span class="material-symbols-outlined" style="font-size:14px">save</span> Save Notes
+          </button>
+          <div class="notes-saved-msg" id="notesSaved">✓ Saved!</div>
+        </div>
+
+        <!-- Guna Match + Compare buttons (hidden when viewing own profile) -->
+        <div id="inlineGunaSection">
+          ${currentUser?.role === 'customer' && currentUser.dbIdx === idx ? '' : `
+          <div style="padding:20px 28px;border-top:1px solid var(--border);display:flex;gap:12px;flex-wrap:wrap">
+            <button onclick="toggleGunaSection()" id="btnToggleGuna"
+              style="display:flex;align-items:center;gap:6px;padding:10px 20px;background:var(--deep);color:var(--gold-light);border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer">
+              <span class="material-symbols-outlined" style="font-size:16px">stars</span> Guna Match ✦
+            </button>
+            ${currentUser?.role === 'customer' ? `
+            <button onclick="openCompareForProfile(${idx})"
+              style="display:flex;align-items:center;gap:6px;padding:10px 20px;background:var(--gold-pale);color:var(--deep);border:1.5px solid var(--gold);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer">
+              <span class="material-symbols-outlined" style="font-size:16px">compare_arrows</span> Compare Profile
+            </button>` : ''}
+          </div>
+
+          <div id="gunaCollapsible" style="display:none;padding:0 28px 24px">
+            <div class="inline-guna-title">
+              <span class="material-symbols-outlined">stars</span>
+              Guna Match
+            </div>
+            <div class="inline-guna-body">
+              <div class="inline-guna-profile">
+                <div class="inline-guna-label">${typeLabel} (This Profile)</div>
+                <div class="inline-guna-name">${name}</div>
+                <div class="inline-guna-meta">
+                  Nakshatra: <b>${row[nakshatraIdx] || 'N/A'}</b> &nbsp;·&nbsp;
+                  Rashi: <b>${row[rashiIdx] || 'N/A'}</b>
+                </div>
+              </div>
+              <div class="inline-guna-vs">⟷</div>
+              ${currentUser?.role === 'customer' ? (() => {
+                const myRow = db[currentUser.dbIdx];
+                const myNakshatra = myRow[nakshatraIdx] || 'N/A';
+                const myRashi = myRow[rashiIdx] || 'N/A';
+                const myType = (myRow[TYPE_INDEX]||'').toLowerCase().includes('groom') ? 'Groom' : 'Bride';
+                return `<div class="inline-guna-profile">
+                  <div class="inline-guna-label">${myType} (Your Profile)</div>
+                  <div class="inline-guna-name">${currentUser.name}</div>
+                  <div class="inline-guna-meta">
+                    Nakshatra: <b>${myNakshatra}</b> &nbsp;·&nbsp;
+                    Rashi: <b>${myRashi}</b>
+                  </div>
+                  <input type="hidden" id="inlineMatchSelect" value="${currentUser.dbIdx}">
+                </div>`;
+              })() : `
+              <div class="inline-guna-select-wrap">
+                <div class="inline-guna-label">Select ${isGroom ? 'Bride' : 'Groom'}</div>
+                <select class="guna-select" id="inlineMatchSelect" onchange="previewInlineMatch(${idx})">
+                  <option value="">— Choose a profile —</option>
+                  ${db.slice(1).map((r,i) => {
+                    const t = (r[TYPE_INDEX]||'').toLowerCase();
+                    const isOpp = isGroom ? t.includes('bride') : t.includes('groom');
+                    if (!isOpp) return '';
+                    return `<option value="${i+1}">${r[nameIdx]||'Unknown'} (${r[0]})</option>`;
+                  }).join('')}
+                </select>
+              </div>`}
+            </div>
+            <div id="inlineGunaResult"></div>
+          </div>
+          `}
+        </div>
+      `;
+
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('detailView').style.display = 'block';
+      window.scrollTo(0, 0);
     }
 
     function showGallery() {
-        document.getElementById('detailView').style.display = 'none';
-        document.getElementById('galleryPage').style.display = 'block';
+      document.getElementById('detailView').style.display = 'none';
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('galleryPage').classList.add('active');
+      document.querySelector('.nav-tab:first-child').classList.add('active');
+      currentDetailIdx = null;
     }
 
-    function openModal(src) {
-        const modal = document.getElementById('imgModal');
-        const modalImg = document.getElementById('fullImg');
-        modal.style.display = "flex";
-        modalImg.src = src;
-        document.body.style.overflow = "hidden";
+    function goBack() {
+      document.getElementById('detailView').style.display = 'none';
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      currentDetailIdx = null;
+      if (detailOrigin === 'myProfile') {
+        document.getElementById('myProfilePage').classList.add('active');
+        // highlight My Profile nav tab
+        document.querySelectorAll('.nav-tab').forEach(t => {
+          if (t.textContent.trim().toLowerCase().includes('my profile')) t.classList.add('active');
+        });
+        renderMyProfile();
+      } else {
+        document.getElementById('galleryPage').classList.add('active');
+        document.querySelector('.nav-tab:first-child').classList.add('active');
+      }
+      window.scrollTo(0, 0);
     }
 
-    function closeModal() {
-        document.getElementById('imgModal').style.display = "none";
-        document.body.style.overflow = "auto";
+    function toggleGunaSection() {
+      const panel = document.getElementById('gunaCollapsible');
+      const btn   = document.getElementById('btnToggleGuna');
+      const open  = panel.style.display === 'none' || panel.style.display === '';
+      panel.style.display = open ? 'block' : 'none';
+      btn.style.background = open ? 'var(--gold)' : 'var(--deep)';
+      btn.style.color      = open ? 'var(--deep)' : 'var(--gold-light)';
+      if (open) setTimeout(() => previewInlineMatch(currentDetailIdx), 80);
     }
 
-    function search() {
-        let val = document.getElementById('search').value.toLowerCase();
-        let cards = document.getElementsByClassName('card');
-        for (let c of cards) {
-            const matchesSearch = c.innerText.toLowerCase().includes(val);
-            const cardType = c.getAttribute('data-type');
-            const matchesFilter = (currentFilter === 'all' || cardType === currentFilter);
-            c.style.display = (matchesSearch && matchesFilter) ? '' : 'none';
+    function openCompareForProfile(idx) {
+      // Pre-load this profile into the compare table, then navigate to compare page
+      if (!compareTableIds.includes(idx)) compareTableIds.push(idx);
+      // Also add the customer's own profile
+      if (currentUser?.dbIdx && !compareTableIds.includes(currentUser.dbIdx)) {
+        compareTableIds.push(currentUser.dbIdx);
+      }
+      renderCompareTable();
+      // Navigate to compare page — create a temporary customer compare tab if needed
+      document.getElementById('detailView').style.display = 'none';
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('comparePage').classList.add('active');
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      window.scrollTo(0, 0);
+    }
+
+    // ═══════════════════════════════════════════
+    //  ADMIN NOTES & EXPIRY
+    // ═══════════════════════════════════════════
+    function saveNotes(uid) {
+      ensureAdminData(uid);
+      adminNotes[uid].notes = document.getElementById('adminNotes').value;
+      const msg = document.getElementById('notesSaved');
+      msg.style.display = 'block';
+      setTimeout(() => msg.style.display = 'none', 2000);
+    }
+
+    function saveExpiry(uid) {
+      ensureAdminData(uid);
+      adminNotes[uid].expiry = document.getElementById('expiryInput').value;
+      initGallery();
+    }
+
+    function addSuggested(uid) {
+      ensureAdminData(uid);
+      const input = document.getElementById(`suggestInput-${uid}`);
+      const val = (input.value || '').trim().toUpperCase();
+      if (!val) return;
+      if (!adminNotes[uid].suggested.includes(val)) {
+        adminNotes[uid].suggested.push(val);
+      }
+      input.value = '';
+      refreshSuggestedPills(uid);
+    }
+
+    function removeSuggested(uid, id) {
+      ensureAdminData(uid);
+      adminNotes[uid].suggested = adminNotes[uid].suggested.filter(x => x !== id);
+      refreshSuggestedPills(uid);
+    }
+
+    function refreshSuggestedPills(uid) {
+      const container = document.getElementById(`suggestedPills-${uid}`);
+      if (!container) return;
+      container.innerHTML = (adminNotes[uid].suggested || []).map(id =>
+        `<span class="suggested-pill" onclick="goToProfile('${id}')">
+          ${id}<span class="remove-pill" onclick="event.stopPropagation();removeSuggested('${uid}','${id}')">✕</span>
+        </span>`).join('');
+    }
+
+    function goToProfile(id) {
+      const idx = db.findIndex((row, i) => i > 0 && row[0] === id);
+      if (idx > 0) showDetail(idx);
+      else alert(`Profile ${id} not found.`);
+    }
+
+    function previewInlineMatch(currentIdx) {
+      const sel = document.getElementById('inlineMatchSelect');
+      const otherIdx = parseInt(sel.value);
+      if (!otherIdx) { document.getElementById('inlineGunaResult').innerHTML = ''; return; }
+
+      const rowA = db[currentIdx];
+      const rowB = db[otherIdx];
+      const typeA = (rowA[TYPE_INDEX]||'').toLowerCase();
+      const isGroomA = typeA.includes('groom');
+
+      const groomRow = isGroomA ? rowA : rowB;
+      const brideRow  = isGroomA ? rowB : rowA;
+
+      const gN = matchNakshatra(groomRow[nakshatraIdx] || '');
+      const bN = matchNakshatra(brideRow[nakshatraIdx] || '');
+      const gR = matchRashi(groomRow[rashiIdx] || '');
+      const bR = matchRashi(brideRow[rashiIdx] || '');
+
+      const kootas = [
+        { name:'Varna',        max:1, score: calcVarna(gN,bN) },
+        { name:'Vashya',       max:2, score: calcVashya(gR,bR) },
+        { name:'Tara',         max:3, score: calcTara(gN,bN) },
+        { name:'Yoni',         max:4, score: calcYoni(gN,bN) },
+        { name:'Graha Maitri', max:5, score: calcGrahaMaitri(gR,bR) },
+        { name:'Gana',         max:6, score: calcGana(gN,bN) },
+      ];
+      const bhakootR = calcBhakoot(gR, bR);
+      const nadiR    = calcNadi(gN, bN, gR, bR);
+      kootas.push({ name:'Bhakoot', max:7, ...bhakootR });
+      kootas.push({ name:'Nadi',    max:8, ...nadiR });
+
+      const total = kootas.reduce((s,k) => s + (k.cancelled ? k.max : k.score), 0);
+      const activeDoshas = kootas.filter(k => k.dosha && !k.cancelled);
+
+      let verdict, vBg;
+      if (activeDoshas.length > 0 && total >= 18) { verdict='⚠ Dosha Present'; vBg='#E65100'; }
+      else if (activeDoshas.length > 0)            { verdict='Not Recommended';  vBg='#B71C1C'; }
+      else if (total >= 27)                         { verdict='Excellent';        vBg='#2E7D32'; }
+      else if (total >= 18)                         { verdict='Good';             vBg='#1565C0'; }
+      else if (total >= 13)                         { verdict='Average';          vBg='#E65100'; }
+      else                                           { verdict='Low';             vBg='#B71C1C'; }
+
+      const otherName = rowB[nameIdx] || 'Unknown';
+      const barsHtml = kootas.map(k => {
+        const displayScore = k.cancelled ? k.max : k.score;
+        const frac = displayScore / k.max;
+        const barCls   = frac >= 0.7 ? 'bar-full'   : frac >= 0.4 ? 'bar-half'   : 'bar-zero';
+        const scoreCls = frac >= 0.7 ? 'score-full' : frac >= 0.4 ? 'score-half' : 'score-zero';
+        const badge = '';
+        return `<div class="inline-score-bar">
+          <div class="inline-koota-name">${k.name}${badge}</div>
+          <div class="inline-koota-bar-wrap"><div class="inline-koota-bar ${barCls}" style="width:${frac*100}%"></div></div>
+          <div class="inline-score-val ${scoreCls}">${displayScore}/${k.max}</div>
+        </div>`;
+      }).join('');
+
+      const doshaWarning = activeDoshas.length > 0
+        ? `<div style="background:#FFEBEE;border:1px solid #EF9A9A;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#C62828">
+            <b>⚠ Active Dosha:</b> ${activeDoshas.map(d => d.name + ' — ' + d.reason).join('<br>')}
+           </div>` : '';
+
+      document.getElementById('inlineGunaResult').innerHTML = `
+        <div class="inline-score-hero">
+          <div class="inline-score-num">${total}<span style="font-size:0.5em;color:rgba(255,255,255,0.5)">/36</span></div>
+          <div class="inline-score-details">
+            <div style="font-size:13px;color:rgba(255,255,255,0.7)">Compatibility with <b style="color:#fff">${otherName}</b></div>
+            <span class="inline-score-verdict" style="background:${vBg};color:#fff">${verdict} · ${Math.round(total/36*100)}%</span>
+          </div>
+        </div>
+        ${doshaWarning}
+        <div style="background:#fff;border-radius:10px;border:1px solid var(--border);padding:12px 16px">
+          ${barsHtml}
+        </div>`;
+    }
+
+    function matchNakshatra(raw) {
+      return NAKSHATRAS.find(n => raw.toLowerCase().includes(n.toLowerCase())) || '';
+    }
+    function matchRashi(raw) {
+      return RASHIS.find(r => raw.toLowerCase().includes(r.split('(')[0].trim().toLowerCase())) || '';
+    }
+
+    // ═══════════════════════════════════════════
+    //  COMPARE (admin only - table view)
+    // ═══════════════════════════════════════════
+    const COMPARE_FIELDS = [
+      { label:'Name',           idx: 5 },
+      { label:'Date of Birth',  idx: 6, fmt: formatDate },
+      { label:'Nakshatra',      idx:10 },
+      { label:'Rashi',          idx:12 },
+      { label:'Gothra',         idx:13 },
+      { label:'Sub Caste',      idx:14 },
+      { label:'Mata',           idx:15 },
+      { label:'Education',      idx:16 },
+      { label:'Work Field',     idx:17 },
+      { label:'Company/Role',   idx:18 },
+      { label:'Height',         idx:32 },
+      { label:'Marital Status', idx: 9 },
+      { label:'Staying In',     idx:30 },
+      { label:'Relocation',     idx:31 },
+      { label:'Age Gap',        idx:34 },
+      { label:'Language',       idx:39 },
+      { label:'Habits',         idx:40 },
+      { label:'Father Name',    idx:20 },
+      { label:"Father's Occ.",  idx:21 },
+      { label:'Mother Name',    idx:24 },
+      { label:"Mother's Occ.",  idx:25 },
+    ];
+
+    function populateCompareSelect() {
+      const sel = document.getElementById('compareAddSelect');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">— Select a profile to add —</option>';
+      for (let i = 1; i < db.length; i++) {
+        const row = db[i];
+        const name = row[nameIdx] || 'Unknown';
+        const type = (row[TYPE_INDEX] || '').toLowerCase().includes('groom') ? 'G' : 'B';
+        sel.innerHTML += `<option value="${i}">[${type}] ${name} — ${row[0]}</option>`;
+      }
+    }
+
+    function addToCompare() {
+      const sel = document.getElementById('compareAddSelect');
+      const idx = parseInt(sel.value);
+      if (!idx) return;
+      if (compareTableIds.includes(idx)) { sel.value = ''; return; }
+      compareTableIds.push(idx);
+      sel.value = '';
+      renderCompareTable();
+    }
+
+    function removeFromCompareTable(idx) {
+      compareTableIds = compareTableIds.filter(i => i !== idx);
+      renderCompareTable();
+    }
+
+    function clearCompareTable() {
+      compareTableIds = [];
+      renderCompareTable();
+    }
+
+    function renderCompareTable() {
+      const wrap = document.getElementById('compareTableWrap');
+      if (compareTableIds.length === 0) {
+        wrap.innerHTML = `<div class="compare-empty-state">
+          <span class="material-symbols-outlined">compare_arrows</span>
+          Use the dropdown above to add profiles for comparison.
+        </div>`;
+        return;
+      }
+
+      // Build table: label col + one col per profile
+      let headerRow = `<div class="compare-label-col"><div class="compare-label-header">Field</div>`;
+      COMPARE_FIELDS.forEach(f => {
+        headerRow += `<div class="compare-row-label">${f.label}</div>`;
+      });
+      headerRow += `</div>`;
+
+      let profileCols = compareTableIds.map(idx => {
+        const row = db[idx];
+        const name = row[nameIdx] || 'Unknown';
+        const typeVal = (row[TYPE_INDEX]||'').toLowerCase();
+        const isGroom = typeVal.includes('groom');
+        const borderColor = isGroom ? 'var(--groom)' : 'var(--bride)';
+        const photoUrl = getPhotoUrl(row[PHOTO_INDICES[0]]);
+        const photoLocal = getLocalUrl(row[PHOTO_INDICES[0]]);
+
+        const photoEl = photoUrl
+          ? `<img class="compare-col-photo" src="${photoUrl}" onerror="this.onerror=null;this.src='${photoLocal||''}'" alt="">`
+          : `<div class="compare-col-photo-placeholder"><span class="material-symbols-outlined">person</span></div>`;
+
+        let cells = COMPARE_FIELDS.map(f => {
+          let val = (row[f.idx] || '').trim();
+          if (f.fmt && val) val = f.fmt(val);
+          return `<div class="compare-cell">${val || '<span style="color:#ccc">—</span>'}</div>`;
+        }).join('');
+
+        return `<div class="compare-col" style="border-top:3px solid ${borderColor}">
+          <div class="compare-col-header">
+            <button class="compare-col-remove" onclick="removeFromCompareTable(${idx})" title="Remove">✕</button>
+            ${photoEl}
+            <div class="compare-col-name">${name}</div>
+            <div class="compare-col-id">${row[0]}</div>
+          </div>
+          ${cells}
+        </div>`;
+      }).join('');
+
+      wrap.innerHTML = `<div class="compare-table">${headerRow}${profileCols}</div>`;
+    }
+
+    // Keep old compare checkbox functions as no-ops to avoid JS errors
+    function toggleCompareMode() {}
+    function toggleCompare() {}
+    function updateCompareBanner() {}
+    function viewCompare() {}
+
+    // ═══════════════════════════════════════════
+    //  MODAL
+    // ═══════════════════════════════════════════
+    // ═══════════════════════════════════════════
+    //  LIGHTBOX CAROUSEL
+    // ═══════════════════════════════════════════
+    let _lbPhotos = []; // { url, local } — populated by showDetail
+    let _lbIdx = 0;
+
+    function openLightbox(startIdx) {
+      if (!_lbPhotos.length) return;
+      _lbIdx = (typeof startIdx === 'number') ? startIdx : 0;
+      _renderLightbox();
+      document.getElementById('lightbox').classList.add('open');
+      document.body.style.overflow = 'hidden';
+      document.addEventListener('keydown', _lbKeyHandler);
+    }
+
+    // Keep openModal as alias so any existing calls (avatar click) still work
+    function openModal(src) { openLightbox(0); }
+    function closeModal() { closeLightbox(); }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', _lbKeyHandler);
+    }
+
+    function lightboxNav(dir) {
+      _lbIdx = (_lbIdx + dir + _lbPhotos.length) % _lbPhotos.length;
+      _renderLightbox();
+    }
+
+    function _lbKeyHandler(e) {
+      if (e.key === 'ArrowRight') lightboxNav(1);
+      else if (e.key === 'ArrowLeft') lightboxNav(-1);
+      else if (e.key === 'Escape') closeLightbox();
+    }
+
+    function _renderLightbox() {
+      const img = document.getElementById('lightboxImg');
+      const photo = _lbPhotos[_lbIdx];
+      img.style.opacity = '0';
+      img.onerror = () => { if (photo.local) { img.src = photo.local; img.onerror = null; } };
+      setTimeout(() => {
+        img.src = photo.url;
+        img.style.opacity = '1';
+      }, 120);
+
+      document.getElementById('lightboxCounter').textContent =
+        `${_lbIdx + 1} / ${_lbPhotos.length}`;
+
+      document.getElementById('lightboxPrev').classList.toggle('hidden', _lbPhotos.length <= 1);
+      document.getElementById('lightboxNext').classList.toggle('hidden', _lbPhotos.length <= 1);
+
+      // Dots
+      document.getElementById('lightboxDots').innerHTML = _lbPhotos.length > 1
+        ? _lbPhotos.map((_, i) =>
+            `<div class="lightbox-dot${i === _lbIdx ? ' active' : ''}" onclick="lightboxNav(${i - _lbIdx})"></div>`
+          ).join('') : '';
+
+      // Sync thumbnail highlight
+      document.querySelectorAll('.photo-thumb').forEach((t, i) =>
+        t.classList.toggle('active', i === _lbIdx));
+    }
+
+    function openHoroscope(rawUrl) {
+      // Convert Google Drive open link to embeddable preview URL
+      let embedUrl = rawUrl;
+      const idMatch = rawUrl.match(/[?&]id=([^&|]+)/);
+      if (idMatch) {
+        embedUrl = `https://drive.google.com/file/d/${idMatch[1]}/preview`;
+      } else if (rawUrl.includes('/file/d/')) {
+        embedUrl = rawUrl.replace('/view', '/preview').replace('/edit', '/preview');
+      }
+      document.getElementById('horoscopeFrame').src = embedUrl;
+      document.getElementById('horoscopeDirectLink').href = rawUrl.split('|')[0];
+      document.getElementById('horoscopeOverlay').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeHoroscope() {
+      document.getElementById('horoscopeOverlay').classList.remove('open');
+      document.getElementById('horoscopeFrame').src = '';
+      document.body.style.overflow = '';
+    }
+
+    // ═══════════════════════════════════════════
+    //  ASHTAKOOTA GUNA MATCHING
+    // ═══════════════════════════════════════════
+    const NAKSHATRAS = [
+      'Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Punarvasu','Pushya','Ashlesha',
+      'Magha','Purva Phalguni','Uttara Phalguni','Hasta','Chitra','Swati','Vishakha','Anuradha','Jyeshtha',
+      'Mula','Purva Ashadha','Uttara Ashadha','Shravana','Dhanishtha','Shatabhisha','Purva Bhadrapada','Uttara Bhadrapada','Revati'
+    ];
+
+    const RASHIS = ['Mesha (Aries)','Vrishabha (Taurus)','Mithuna (Gemini)','Karka (Cancer)','Simha (Leo)','Kanya (Virgo)','Tula (Libra)','Vrishchika (Scorpio)','Dhanu (Sagittarius)','Makara (Capricorn)','Kumbha (Aquarius)','Meena (Pisces)'];
+    const GANAS  = ['Deva','Manushya','Rakshasa'];
+    const NADIS  = ['Aadi','Madhya','Antya'];
+
+    // Nakshatra → { varna, vashya, yoni, graha, gana, nadi, tara-group }
+    const NAKSHATRA_DATA = {
+      'Ashwini':          { varna:4, yoni:'Horse',      graha:'Ketu',    gana:'Deva',     nadi:'Aadi'   },
+      'Bharani':          { varna:1, yoni:'Elephant',   graha:'Shukra',  gana:'Manushya', nadi:'Madhya' },
+      'Krittika':         { varna:2, yoni:'Goat',        graha:'Surya',   gana:'Rakshasa', nadi:'Antya'  },
+      'Rohini':           { varna:4, yoni:'Serpent',     graha:'Chandra', gana:'Manushya', nadi:'Antya'  },
+      'Mrigashira':       { varna:3, yoni:'Serpent',     graha:'Mangala', gana:'Deva',     nadi:'Madhya' },
+      'Ardra':            { varna:1, yoni:'Dog',          graha:'Rahu',    gana:'Manushya', nadi:'Aadi'   },
+      'Punarvasu':        { varna:4, yoni:'Cat',          graha:'Guru',    gana:'Deva',     nadi:'Aadi'   },
+      'Pushya':           { varna:2, yoni:'Goat',         graha:'Shani',   gana:'Deva',     nadi:'Madhya' },
+      'Ashlesha':         { varna:1, yoni:'Cat',          graha:'Budha',   gana:'Rakshasa', nadi:'Antya'  },
+      'Magha':            { varna:1, yoni:'Rat',           graha:'Ketu',    gana:'Rakshasa', nadi:'Antya'  },
+      'Purva Phalguni':   { varna:3, yoni:'Rat',           graha:'Shukra',  gana:'Manushya', nadi:'Madhya' },
+      'Uttara Phalguni':  { varna:2, yoni:'Cow',           graha:'Surya',   gana:'Manushya', nadi:'Aadi'   },
+      'Hasta':            { varna:4, yoni:'Buffalo',       graha:'Chandra', gana:'Deva',     nadi:'Aadi'   },
+      'Chitra':           { varna:1, yoni:'Tiger',         graha:'Mangala', gana:'Rakshasa', nadi:'Madhya' },
+      'Swati':            { varna:4, yoni:'Buffalo',       graha:'Rahu',    gana:'Deva',     nadi:'Antya'  },
+      'Vishakha':         { varna:3, yoni:'Tiger',         graha:'Guru',    gana:'Rakshasa', nadi:'Antya'  },
+      'Anuradha':         { varna:2, yoni:'Deer',          graha:'Shani',   gana:'Deva',     nadi:'Madhya' },
+      'Jyeshtha':         { varna:1, yoni:'Deer',          graha:'Budha',   gana:'Rakshasa', nadi:'Aadi'   },
+      'Mula':             { varna:1, yoni:'Dog',            graha:'Ketu',    gana:'Rakshasa', nadi:'Aadi'   },
+      'Purva Ashadha':    { varna:3, yoni:'Monkey',        graha:'Shukra',  gana:'Manushya', nadi:'Madhya' },
+      'Uttara Ashadha':   { varna:2, yoni:'Mongoose',      graha:'Surya',   gana:'Manushya', nadi:'Antya'  },
+      'Shravana':         { varna:4, yoni:'Monkey',        graha:'Chandra', gana:'Deva',     nadi:'Antya'  },
+      'Dhanishtha':       { varna:3, yoni:'Lion',           graha:'Mangala', gana:'Rakshasa', nadi:'Madhya' },
+      'Shatabhisha':      { varna:1, yoni:'Horse',          graha:'Rahu',    gana:'Rakshasa', nadi:'Aadi'   },
+      'Purva Bhadrapada': { varna:3, yoni:'Lion',           graha:'Guru',    gana:'Manushya', nadi:'Aadi'   },
+      'Uttara Bhadrapada':{ varna:2, yoni:'Cow',            graha:'Shani',   gana:'Manushya', nadi:'Madhya' },
+      'Revati':           { varna:4, yoni:'Elephant',       graha:'Budha',   gana:'Deva',     nadi:'Antya'  },
+    };
+
+    // Yoni compatibility table (1=friendly,0=neutral,-1=enemy)
+    const YONI_COMPAT = {
+      'Horse':{'Horse':4,'Cow':2,'Elephant':3,'Goat':0,'Serpent':0,'Dog':0,'Cat':0,'Rat':0,'Buffalo':0,'Tiger':0,'Deer':0,'Monkey':2,'Mongoose':0,'Lion':0},
+      'Elephant':{'Horse':3,'Cow':3,'Elephant':4,'Goat':2,'Serpent':0,'Dog':0,'Cat':0,'Rat':0,'Buffalo':2,'Tiger':0,'Deer':2,'Monkey':2,'Mongoose':0,'Lion':0},
+      'Goat':{'Horse':0,'Cow':2,'Elephant':2,'Goat':4,'Serpent':0,'Dog':0,'Cat':0,'Rat':0,'Buffalo':2,'Tiger':0,'Deer':2,'Monkey':1,'Mongoose':0,'Lion':0},
+      'Serpent':{'Horse':0,'Cow':0,'Elephant':0,'Goat':0,'Serpent':4,'Dog':0,'Cat':0,'Rat':0,'Buffalo':0,'Tiger':0,'Deer':0,'Monkey':0,'Mongoose':0,'Lion':0},
+      'Dog':{'Horse':0,'Cow':0,'Elephant':0,'Goat':0,'Serpent':0,'Dog':4,'Cat':0,'Rat':2,'Buffalo':0,'Tiger':0,'Deer':2,'Monkey':2,'Mongoose':0,'Lion':0},
+      'Cat':{'Horse':0,'Cow':0,'Elephant':0,'Goat':0,'Serpent':0,'Dog':0,'Cat':4,'Rat':0,'Buffalo':0,'Tiger':0,'Deer':2,'Monkey':2,'Mongoose':0,'Lion':0},
+      'Rat':{'Horse':0,'Cow':0,'Elephant':0,'Goat':0,'Serpent':0,'Dog':2,'Cat':0,'Rat':4,'Buffalo':0,'Tiger':0,'Deer':2,'Monkey':0,'Mongoose':0,'Lion':0},
+      'Buffalo':{'Horse':0,'Cow':3,'Elephant':2,'Goat':2,'Serpent':0,'Dog':0,'Cat':0,'Rat':0,'Buffalo':4,'Tiger':0,'Deer':2,'Monkey':2,'Mongoose':0,'Lion':0},
+      'Tiger':{'Horse':0,'Cow':0,'Elephant':0,'Goat':0,'Serpent':0,'Dog':0,'Cat':0,'Rat':0,'Buffalo':0,'Tiger':4,'Deer':0,'Monkey':0,'Mongoose':0,'Lion':2},
+      'Deer':{'Horse':0,'Cow':2,'Elephant':2,'Goat':2,'Serpent':0,'Dog':2,'Cat':2,'Rat':2,'Buffalo':2,'Tiger':0,'Deer':4,'Monkey':2,'Mongoose':0,'Lion':0},
+      'Monkey':{'Horse':2,'Cow':0,'Elephant':2,'Goat':1,'Serpent':0,'Dog':2,'Cat':2,'Rat':0,'Buffalo':2,'Tiger':0,'Deer':2,'Monkey':4,'Mongoose':0,'Lion':0},
+      'Mongoose':{'Horse':0,'Cow':0,'Elephant':0,'Goat':0,'Serpent':0,'Dog':0,'Cat':0,'Rat':0,'Buffalo':0,'Tiger':0,'Deer':0,'Monkey':0,'Mongoose':4,'Lion':0},
+      'Lion':{'Horse':0,'Cow':0,'Elephant':0,'Goat':0,'Serpent':0,'Dog':0,'Cat':0,'Rat':0,'Buffalo':0,'Tiger':2,'Deer':0,'Monkey':0,'Mongoose':0,'Lion':4},
+      'Cow':{'Horse':2,'Cow':4,'Elephant':3,'Goat':2,'Serpent':0,'Dog':0,'Cat':0,'Rat':0,'Buffalo':3,'Tiger':0,'Deer':2,'Monkey':0,'Mongoose':0,'Lion':0},
+    };
+
+    // Graha Maitri table (planet friendships)
+    const GRAHA_FRIENDS = {
+      'Surya':   ['Chandra','Mangala','Guru'],
+      'Chandra': ['Surya','Budha'],
+      'Mangala': ['Surya','Chandra','Guru'],
+      'Budha':   ['Surya','Shukra'],
+      'Guru':    ['Surya','Chandra','Mangala'],
+      'Shukra':  ['Budha','Shani'],
+      'Shani':   ['Budha','Shukra'],
+      'Rahu':    ['Shukra','Shani'],
+      'Ketu':    ['Shukra','Shani'],
+    };
+
+    const RASHI_LORD = {
+      'Mesha (Aries)':'Mangala','Vrishabha (Taurus)':'Shukra','Mithuna (Gemini)':'Budha',
+      'Karka (Cancer)':'Chandra','Simha (Leo)':'Surya','Kanya (Virgo)':'Budha',
+      'Tula (Libra)':'Shukra','Vrishchika (Scorpio)':'Mangala','Dhanu (Sagittarius)':'Guru',
+      'Makara (Capricorn)':'Shani','Kumbha (Aquarius)':'Shani','Meena (Pisces)':'Guru',
+    };
+
+    const RASHI_BHAKOOT = [
+      [0,2,3,4,5,7,9,11],  // Mesha
+      [0,1,3,4,5,6,8,10],  // Vrishabha
+      [0,1,2,4,5,6,7,9],   // Mithuna
+      [0,1,2,3,5,6,7,8],   // Karka
+      [0,1,2,3,4,6,7,8,9], // Simha
+      [0,1,2,3,4,5,7,8,9], // Kanya
+      [0,2,3,4,5,6,8,9,10],// Tula
+      [0,1,3,4,5,6,7,9,10],// Vrishchika
+      [0,1,2,4,5,6,7,8,10],// Dhanu
+      [0,1,2,3,5,6,7,8,9], // Makara
+      [0,1,2,3,4,6,7,8,9], // Kumbha
+      [0,1,2,3,4,5,7,8,9], // Meena
+    ];
+
+    function calcVarna(gN, bN) {
+      const g = NAKSHATRA_DATA[gN]; const b = NAKSHATRA_DATA[bN];
+      if (!g || !b) return 0;
+      return g.varna >= b.varna ? 1 : 0;
+    }
+
+    function calcVashya(gR, bR) {
+      const vashyaGroups = [
+        ['Mesha (Aries)','Vrishchika (Scorpio)'],
+        ['Vrishabha (Taurus)','Karka (Cancer)'],
+        ['Mithuna (Gemini)','Kanya (Virgo)'],
+        ['Simha (Leo)'],
+        ['Dhanu (Sagittarius)','Meena (Pisces)'],
+        ['Makara (Capricorn)','Kumbha (Aquarius)'],
+        ['Tula (Libra)']
+      ];
+      const gGroup = vashyaGroups.findIndex(g => g.includes(gR));
+      const bGroup = vashyaGroups.findIndex(g => g.includes(bR));
+      if (gGroup === -1 || bGroup === -1) return 1;
+      return gGroup === bGroup ? 2 : 1;
+    }
+
+    function calcTara(gN, bN) {
+      const gIdx = NAKSHATRAS.indexOf(gN);
+      const bIdx = NAKSHATRAS.indexOf(bN);
+      if (gIdx === -1 || bIdx === -1) return 1;
+      const tara = ((bIdx - gIdx + 27) % 27) % 9 + 1;
+      const good = [1,2,4,6,8];
+      return good.includes(tara) ? 3 : 0;
+    }
+
+    function calcYoni(gN, bN) {
+      const g = NAKSHATRA_DATA[gN]; const b = NAKSHATRA_DATA[bN];
+      if (!g || !b) return 2;
+      const score = (YONI_COMPAT[g.yoni] || {})[b.yoni];
+      return score !== undefined ? score : 2;
+    }
+
+    function calcGrahaMaitri(gR, bR) {
+      const gLord = RASHI_LORD[gR]; const bLord = RASHI_LORD[bR];
+      if (!gLord || !bLord) return 3;
+      if (gLord === bLord) return 5;
+      const gF = (GRAHA_FRIENDS[gLord] || []).includes(bLord);
+      const bF = (GRAHA_FRIENDS[bLord] || []).includes(gLord);
+      if (gF && bF) return 5;
+      if (gF || bF) return 4;
+      return 2;
+    }
+
+    function calcGana(gN, bN) {
+      const g = NAKSHATRA_DATA[gN]; const b = NAKSHATRA_DATA[bN];
+      if (!g || !b) return 3;
+      if (g.gana === b.gana) return 6;
+      if ((g.gana === 'Deva' && b.gana === 'Manushya') || (g.gana === 'Manushya' && b.gana === 'Deva')) return 5;
+      if ((g.gana === 'Deva' && b.gana === 'Rakshasa') || (g.gana === 'Rakshasa' && b.gana === 'Deva')) return 1;
+      return 3;
+    }
+
+    function calcBhakoot(gR, bR) {
+      const gIdx = RASHIS.indexOf(gR); const bIdx = RASHIS.indexOf(bR);
+      if (gIdx === -1 || bIdx === -1) return { score: 4, dosha: false, cancelled: false };
+      const diff1 = Math.abs(gIdx - bIdx) + 1;
+      const diff2 = 13 - diff1;
+      const bad = [6,8,5,9,12,2];
+      if (!bad.includes(diff1) && !bad.includes(diff2)) return { score: 7, dosha: false, cancelled: false };
+
+      // Bhakoot Dosha — check if Rashi lords are friends (cancels the dosha)
+      const gLord = RASHI_LORD[gR]; const bLord = RASHI_LORD[bR];
+      const gFriendOfB = (GRAHA_FRIENDS[gLord] || []).includes(bLord);
+      const bFriendOfG = (GRAHA_FRIENDS[bLord] || []).includes(gLord);
+      if (gFriendOfB && bFriendOfG)
+        return { score: 7, dosha: true, cancelled: true, reason: 'Bhakoot Dosha cancelled — Rashi lords are mutual friends (' + gLord + ' & ' + bLord + ')' };
+
+      return { score: 0, dosha: true, cancelled: false, reason: 'Bhakoot Dosha — unfavourable Rashi positions (' + diff1 + '-' + diff2 + ')' };
+    }
+
+    function calcNadi(gN, bN, gR, bR) {
+      const g = NAKSHATRA_DATA[gN]; const b = NAKSHATRA_DATA[bN];
+      if (!g || !b) return { score: 4, dosha: false, cancelled: false };
+      if (g.nadi !== b.nadi) return { score: 8, dosha: false, cancelled: false };
+
+      // Nadi Dosha exists — check cancellations
+      // Cancel 1: same Rashi but different Nakshatra
+      const sameRashi = gR && bR && (gR === bR);
+      const sameNakshatra = gN === bN;
+      if (sameRashi && !sameNakshatra) return { score: 8, dosha: true, cancelled: true, reason: 'Same Rashi, different Nakshatra — Nadi Dosha cancelled' };
+      // Cancel 2: same Nakshatra but different Rashi
+      if (sameNakshatra && !sameRashi) return { score: 8, dosha: true, cancelled: true, reason: 'Same Nakshatra, different Rashi — Nadi Dosha cancelled' };
+
+      return { score: 0, dosha: true, cancelled: false, reason: 'Nadi Dosha — same Nadi (' + g.nadi + ')' };
+    }
+
+    function setGunaFieldError(id, hasError) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.borderColor = hasError ? '#e53935' : '';
+      el.style.background  = hasError ? '#fff5f5' : '';
+    }
+
+    function clearGunaErrors() {
+      ['gunaGroomNakshatra','gunaBrideNakshatra','gunaGroomRashi','gunaBrideRashi'].forEach(id => setGunaFieldError(id, false));
+      const errEl = document.getElementById('gunaValidationError');
+      if (errEl) errEl.style.display = 'none';
+    }
+
+    function showGunaError(msg) {
+      const errEl = document.getElementById('gunaValidationError');
+      if (errEl) { errEl.textContent = '⚠ ' + msg; errEl.style.display = 'block'; }
+    }
+
+    function calculateGuna() {
+      clearGunaErrors();
+
+      const gN = document.getElementById('gunaGroomNakshatra').value;
+      const bN = document.getElementById('gunaBrideNakshatra').value;
+      const gR = document.getElementById('gunaGroomRashi').value;
+      const bR = document.getElementById('gunaBrideRashi').value;
+      const gGana = document.getElementById('gunaGroomGana').value;
+      const bGana = document.getElementById('gunaBrideGana').value;
+      const gNadi = document.getElementById('gunaGroomNadi').value;
+      const bNadi = document.getElementById('gunaBrideNadi').value;
+
+      // Validate required fields
+      let hasError = false;
+      if (!gN) { setGunaFieldError('gunaGroomNakshatra', true); hasError = true; }
+      if (!bN) { setGunaFieldError('gunaBrideNakshatra', true); hasError = true; }
+      if (!gR) { setGunaFieldError('gunaGroomRashi', true); hasError = true; }
+      if (!bR) { setGunaFieldError('gunaBrideRashi', true); hasError = true; }
+
+      if (hasError) {
+        const missing = [];
+        if (!gN) missing.push("Groom's Nakshatra");
+        if (!bN) missing.push("Bride's Nakshatra");
+        if (!gR) missing.push("Groom's Rashi");
+        if (!bR) missing.push("Bride's Rashi");
+        showGunaError('Please select: ' + missing.join(', '));
+        document.getElementById('gunaValidationError').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      // Override gana/nadi from dropdowns if provided
+      const gData = Object.assign({}, NAKSHATRA_DATA[gN] || {});
+      const bData = Object.assign({}, NAKSHATRA_DATA[bN] || {});
+      if (gGana) gData.gana = gGana;
+      if (bGana) bData.gana = bGana;
+      if (gNadi) gData.nadi = gNadi;
+      if (bNadi) bData.nadi = bNadi;
+
+      const tempGN = gN; const tempBN = bN;
+      NAKSHATRA_DATA[gN] = gData; NAKSHATRA_DATA[bN] = bData;
+
+      const kootas = [
+        { name:'Varna',        max:1,  desc:'Spiritual/ego compatibility',      score: calcVarna(gN,bN) },
+        { name:'Vashya',       max:2,  desc:'Mutual attraction & control',       score: calcVashya(gR,bR) },
+        { name:'Tara',         max:3,  desc:'Birth star & destiny',              score: calcTara(gN,bN) },
+        { name:'Yoni',         max:4,  desc:'Physical & temperamental harmony',  score: calcYoni(gN,bN) },
+        { name:'Graha Maitri', max:5,  desc:'Mental & intellectual bond',        score: calcGrahaMaitri(gR,bR) },
+        { name:'Gana',         max:6,  desc:'Nature & temperament',              score: calcGana(gN,bN) },
+      ];
+
+      const bhakootResult = calcBhakoot(gR, bR);
+      const nadiResult    = calcNadi(gN, bN, gR, bR);
+
+      kootas.push({ name:'Bhakoot', max:7, desc:'Emotional & financial harmony',  ...bhakootResult });
+      kootas.push({ name:'Nadi',    max:8, desc:'Health & genetic compatibility', ...nadiResult });
+
+      // Restore
+      NAKSHATRA_DATA[tempGN] = gData; NAKSHATRA_DATA[tempBN] = bData;
+
+      const total = kootas.reduce((s,k) => s + k.score, 0);
+      const pct = Math.round(total / 36 * 100);
+
+      // Collect active doshas (dosha present and NOT cancelled)
+      const activeDoshas = kootas.filter(k => k.dosha && !k.cancelled);
+      const cancelledDoshas = kootas.filter(k => k.dosha && k.cancelled);
+
+      // Verdict logic: active doshas downgrade regardless of score
+      let verdict, verdictColor, verdictBg;
+      if (activeDoshas.length > 0 && total >= 18) {
+        verdict = 'Caution — Dosha Present'; verdictColor = '#fff'; verdictBg = '#E65100';
+      } else if (activeDoshas.length > 0 && total < 18) {
+        verdict = 'Not Recommended'; verdictColor = '#fff'; verdictBg = '#B71C1C';
+      } else if (total >= 27) {
+        verdict = 'Excellent Match'; verdictColor = '#fff'; verdictBg = '#2E7D32';
+      } else if (total >= 18) {
+        verdict = 'Good Match'; verdictColor = '#fff'; verdictBg = '#1565C0';
+      } else if (total >= 13) {
+        verdict = 'Average Match'; verdictColor = '#fff'; verdictBg = '#E65100';
+      } else {
+        verdict = 'Needs Attention'; verdictColor = '#fff'; verdictBg = '#B71C1C';
+      }
+
+      let rowsHtml = kootas.map(k => {
+        // If dosha cancelled, show full score with a cancelled-dosha badge
+        const displayScore = k.cancelled ? k.max : k.score;
+        const frac = displayScore / k.max;
+        const cls = frac >= 0.7 ? 'score-full bar-full' : frac >= 0.4 ? 'score-half bar-half' : 'score-zero bar-zero';
+        const [scoreCls, barCls] = cls.split(' ');
+        const doshaBadge = '';
+        return `<div class="koota-row">
+          <div class="koota-name">${k.name}${doshaBadge}</div>
+          <div class="koota-desc">${k.desc}${k.reason ? '<br><span style="font-size:10px;color:#888;font-style:italic">' + k.reason + '</span>' : ''}</div>
+          <div class="koota-bar-wrap"><div class="koota-bar ${barCls}" style="width:${frac*100}%"></div></div>
+          <div class="koota-score ${scoreCls}">${displayScore}/${k.max}</div>
+        </div>`;
+      }).join('');
+
+      // Dosha warning banners
+      let doshaHtml = '';
+      if (activeDoshas.length > 0) {
+        doshaHtml += `<div style="background:#FFEBEE;border:1px solid #EF9A9A;border-radius:10px;padding:14px 16px;margin-bottom:16px">
+          <div style="font-weight:700;color:#C62828;font-size:13px;margin-bottom:6px">⚠ Active Dosha Detected</div>
+          ${activeDoshas.map(d => `<div style="font-size:12px;color:#B71C1C;margin-top:4px">• <b>${d.name} Dosha:</b> ${d.reason}</div>`).join('')}
+          <div style="font-size:11px;color:#888;margin-top:8px">Even with a score above 18, active doshas require consultation with a qualified astrologer before proceeding.</div>
+        </div>`;
+      }
+      if (cancelledDoshas.length > 0) {
+        doshaHtml += `<div style="background:#E8F5E9;border:1px solid #A5D6A7;border-radius:10px;padding:14px 16px;margin-bottom:16px">
+          <div style="font-weight:700;color:#2E7D32;font-size:13px;margin-bottom:6px">✓ Dosha Cancelled</div>
+          ${cancelledDoshas.map(d => `<div style="font-size:12px;color:#1B5E20;margin-top:4px">• <b>${d.name}:</b> ${d.reason}</div>`).join('')}
+        </div>`;
+      }
+
+      document.getElementById('gunaResult').style.display = 'block';
+      document.getElementById('gunaResult').innerHTML = `
+        <div class="guna-score-hero">
+          <div class="guna-score-number">${total}<span class="guna-score-max">/36</span></div>
+          <div class="guna-score-label">${pct}% compatibility</div>
+          <span class="guna-verdict" style="background:${verdictBg};color:${verdictColor}">${verdict}</span>
+        </div>
+        ${doshaHtml}
+        <div class="guna-breakdown">
+          <div class="guna-breakdown-title">Koota Breakdown</div>
+          ${rowsHtml}
+        </div>`;
+
+      document.getElementById('gunaResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function loadNakshatra(role) {
+      const prefix = role === 'groom' ? 'Groom' : 'Bride';
+      const select = document.getElementById(`guna${prefix}Profile`);
+      const idx = parseInt(select.value);
+      if (!idx) return;
+      const row = db[idx];
+      const nakshatraRaw = (row[nakshatraIdx] || '').trim();
+      const rashiRaw     = (row[rashiIdx]     || '').trim();
+
+      // Match Nakshatra — data may have Kannada like "ಪುಷ್ಯ (Pushya)"
+      const matchedN = NAKSHATRAS.find(n => nakshatraRaw.toLowerCase().includes(n.toLowerCase()));
+      if (matchedN) {
+        document.getElementById(`guna${prefix}Nakshatra`).value = matchedN;
+        setGunaFieldError(`guna${prefix}Nakshatra`, false);
+        // Auto-fill Gana & Nadi from the nakshatra data table
+        const nd = NAKSHATRA_DATA[matchedN];
+        if (nd) {
+          document.getElementById(`guna${prefix}Gana`).value = nd.gana;
+          document.getElementById(`guna${prefix}Nadi`).value = nd.nadi;
         }
+      }
+
+      // Match Rashi — data has formats like:
+      //   "ತುಲಾ - Libra", "ಕರ್ಕಾಟಕ - Cancer", "Tula (Libra)"
+      // Strategy: extract English word(s) from the raw value, then match against
+      // the English part inside parentheses in RASHIS array
+      const englishInRaw = (rashiRaw.match(/[A-Za-z][A-Za-z\s]+/) || [''])[0].trim().toLowerCase();
+      const matchedR = RASHIS.find(r => {
+        // r looks like "Tula (Libra)" — check both Sanskrit name and English name
+        const sanskrit = r.split('(')[0].trim().toLowerCase();         // "tula"
+        const english  = (r.match(/\(([^)]+)\)/) || ['',''])[1].toLowerCase(); // "libra"
+        return englishInRaw.includes(sanskrit) || englishInRaw.includes(english)
+            || sanskrit.includes(englishInRaw)  || english.includes(englishInRaw);
+      });
+      if (matchedR) {
+        document.getElementById(`guna${prefix}Rashi`).value = matchedR;
+        setGunaFieldError(`guna${prefix}Rashi`, false);
+      }
     }
 
-    initGallery();
+    // Populate Guna selectors
+    function populateGunaSelects() {
+      const groomSel = document.getElementById('gunaGroomProfile');
+      const brideSel = document.getElementById('gunaBrideProfile');
+
+      for (let i = 1; i < db.length; i++) {
+        const row = db[i];
+        const name = row[nameIdx] || 'Unknown';
+        const typeVal = (row[TYPE_INDEX] || '').toLowerCase();
+        const opt = `<option value="${i}">${name} (${row[0]})</option>`;
+        if (typeVal.includes('groom')) groomSel.innerHTML += opt;
+        else if (typeVal.includes('bride')) brideSel.innerHTML += opt;
+      }
+
+      // Nakshatra, Rashi, Gana, Nadi dropdowns
+      ['gunaGroomNakshatra','gunaBrideNakshatra'].forEach(id => {
+        const sel = document.getElementById(id);
+        NAKSHATRAS.forEach(n => sel.innerHTML += `<option value="${n}">${n}</option>`);
+      });
+      ['gunaGroomRashi','gunaBrideRashi'].forEach(id => {
+        const sel = document.getElementById(id);
+        RASHIS.forEach(r => sel.innerHTML += `<option value="${r}">${r}</option>`);
+      });
+      ['gunaGroomGana','gunaBrideGana'].forEach(id => {
+        const sel = document.getElementById(id);
+        GANAS.forEach(g => sel.innerHTML += `<option value="${g}">${g}</option>`);
+      });
+      ['gunaGroomNadi','gunaBrideNadi'].forEach(id => {
+        const sel = document.getElementById(id);
+        NADIS.forEach(n => sel.innerHTML += `<option value="${n}">${n}</option>`);
+      });
+    }
+
+    // ═══════════════════════════════════════════
+    //  INIT
+    // ═══════════════════════════════════════════
+    if (loadSession()) {
+      bootApp();
+    } // else: login screen stays visible
 </script>
+
+<!-- ═══════════════════════════════════════════
+     EDIT PROFILE MODAL
+═══════════════════════════════════════════ -->
+<div id="editProfileModal">
+    <div class="edit-modal-box">
+        <div class="edit-modal-header">
+            <h3>Edit My Profile</h3>
+            <button class="edit-modal-close" onclick="closeEditProfile()">✕</button>
+        </div>
+        <div class="edit-modal-body" id="editModalBody"></div>
+        <div class="edit-modal-footer">
+            <span class="edit-saved-msg" id="editSavedMsg">✓ Changes saved!</span>
+            <button class="btn-edit-cancel" onclick="closeEditProfile()">Cancel</button>
+            <button class="btn-edit-save" onclick="saveEditProfile()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
