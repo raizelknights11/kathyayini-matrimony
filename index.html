@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kathyayini Matrimony — Admin Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Brand header — scrolls away -->
+<div class="brand-header">
+  <h1>Kathyayini Matrimony</h1>
+  <span>Admin Portal</span>
+</div>
+
+<!-- Sticky controls bar -->
+<div class="controls-bar" id="controls-bar">
+  <div class="controls-inner">
+    <!-- Search -->
+    <div class="search-box">
+      <input type="text" id="search-input" placeholder="Search by name, gothra, nakshatra, profession…">
+      <button class="search-clear" id="search-clear" onclick="clearSearch()" title="Clear">✕</button>
+    </div>
+
+    <!-- Bride / Groom count-filter buttons -->
+    <button class="count-pill active" data-filter="all" id="pill-all">
+      All <span class="pill-num" id="all-count">—</span>
+    </button>
+    <button class="count-pill" data-filter="Bride" id="pill-bride">
+      <span class="dot bride"></span>Brides <span class="pill-num" id="bride-count">—</span>
+    </button>
+    <button class="count-pill" data-filter="Groom" id="pill-groom">
+      <span class="dot groom"></span>Grooms <span class="pill-num" id="groom-count">—</span>
+    </button>
+
+    <!-- Filters -->
+    <select class="filter-btn" id="caste-filter">
+      <option value="">All Sub-Castes</option>
+    </select>
+    <select class="filter-btn" id="location-filter">
+      <option value="">All Locations</option>
+    </select>
+    <select class="filter-btn" id="sort-select">
+      <option value="newest">Newest First</option>
+      <option value="oldest">Oldest First</option>
+      <option value="name">Name A–Z</option>
+    </select>
+
+    <!-- Right-side actions -->
+    <div class="controls-actions">
+      <button id="logout-btn" class="logout-btn" onclick="logout()" style="display:none">↩ Logout</button>
+    </div>
+  </div>
+</div>
+
+<div class="results-bar">
+  Showing <span class="count" id="results-count">—</span> profiles
+</div>
+
+<div class="grid-container" id="grid">
+  <div class="loading-state" style="grid-column:1/-1">
+    <div class="spinner"></div>
+    <div>Loading profiles…</div>
+  </div>
+</div>
+
+<!-- Profile Detail Modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600" id="modal-name"></div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px" id="modal-id"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+
+<script src="app.js"></script>
+</body>
+</html>
