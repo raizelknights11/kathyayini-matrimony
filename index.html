@@ -11,8 +11,15 @@
 
 <!-- Brand header — scrolls away -->
 <div class="brand-header">
-  <h1>Kathyayini Matrimony</h1>
-  <span>Admin Portal</span>
+  <div class="brand-text">
+    <h1>Kathyayini Matrimony</h1>
+    <span>Admin Portal</span>
+  </div>
+  <button id="logout-btn" class="logout-btn" onclick="logout()" style="display:none">
+    <span class="logout-role"></span>
+    <span class="logout-sep">·</span>
+    <span class="logout-action">Sign Out</span>
+  </button>
 </div>
 
 <!-- Sticky controls bar -->
@@ -46,11 +53,12 @@
       <option value="newest">Newest First</option>
       <option value="oldest">Oldest First</option>
       <option value="name">Name A–Z</option>
+      <option value="dob_asc">Birth Year: Oldest</option>
+      <option value="dob_desc" selected>Birth Year: Youngest</option>
     </select>
 
-    <!-- Right-side actions -->
     <div class="controls-actions">
-      <button id="logout-btn" class="logout-btn" onclick="logout()" style="display:none">↩ Logout</button>
+      <button class="filter-btn reset-btn" id="reset-btn" onclick="resetFilters()" title="Reset all filters">↺ Reset</button>
     </div>
   </div>
 </div>
@@ -68,18 +76,13 @@
 
 <!-- Profile Detail Modal -->
 <div class="modal-overlay" id="modal-overlay">
+  <button class="modal-nav-btn modal-nav-prev" id="modal-prev-btn" onclick="navigateModal(-1)" title="Previous profile">‹</button>
   <div class="modal">
-    <div class="modal-header">
-      <div>
-        <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600" id="modal-name"></div>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:4px" id="modal-id"></div>
-      </div>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
+    <button class="modal-close modal-close-abs" onclick="closeModal()">✕</button>
     <div class="modal-body" id="modal-body"></div>
   </div>
+  <button class="modal-nav-btn modal-nav-next" id="modal-next-btn" onclick="navigateModal(1)" title="Next profile">›</button>
 </div>
-
 
 <script src="app.js"></script>
 </body>
