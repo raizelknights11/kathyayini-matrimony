@@ -457,8 +457,8 @@ async function openModal(uid) {
   // Update prev/next nav button states based on position in filtered list
   const prevBtn = document.getElementById('modal-prev-btn');
   const nextBtn = document.getElementById('modal-next-btn');
-  prevBtn.style.visibility = _modalIndex > 0 ? 'visible' : 'hidden';
-  nextBtn.style.visibility = (_modalIndex >= 0 && _modalIndex < filtered.length - 1) ? 'visible' : 'hidden';
+  if (prevBtn) prevBtn.style.visibility = _modalIndex > 0 ? 'visible' : 'hidden';
+  if (nextBtn) nextBtn.style.visibility = (_modalIndex >= 0 && _modalIndex < filtered.length - 1) ? 'visible' : 'hidden';
 
   document.getElementById('modal-overlay').classList.add('open');
 }
