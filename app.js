@@ -3,7 +3,7 @@
 // =====================================================================
 
 // URL of the deployed Google Apps Script web app (Code.gs → Deploy → Web app)
-const API_URL = 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzfUmn1S2YKDZJI1VUQ6gUVPmEub-ZJwyYLpVAfGoIPPGTNvcXe5SuHfI7-I2A2v0M9/exec';
 
 // Registration form shown to people whose email isn't registered yet
 const REGISTER_URL = 'https://forms.gle/b58ddrykTDXBe1LNA';
