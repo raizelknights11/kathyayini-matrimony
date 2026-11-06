@@ -27,6 +27,7 @@ let activeFilter = 'all';
 let currentRole  = null;  // null = not logged in | 'admin' | 'member'
 let sessionToken = null;
 let sessionEmail = null;
+let myProfiles   = [];   // the signed-in member's own profile(s), sent by the server
 let _previewGuest = false;
 
 // =====================================================================
@@ -625,7 +626,8 @@ async function loadData() {
       throw new Error(res.error || 'Unknown error');
     }
     currentRole = res.role;
-    sessionStorage.setItem('km_role', res.role);
+    myProfiles  = res.myProfiles || [];
+    try { localStorage.setItem('km_role', res.role); } catch (e) {}
     allProfiles = (res.profiles || []).filter(p => p['Name'] && p['Name'].trim());
 
     const brides = allProfiles.filter(p => p['Filling the Form Of'] === 'Bride').length;
@@ -634,6 +636,19 @@ async function loadData() {
     document.getElementById('groom-count').textContent = grooms;
     const allCountEl = document.getElementById('all-count');
     if (allCountEl) allCountEl.textContent = allProfiles.length;
+
+    // Members only receive the opposite kind of profile (the server enforces
+    // this). Hide the Bride/Groom buttons and relabel "All" to match.
+    const restricted = res.role !== 'admin' && (res.viewing === 'Bride' || res.viewing === 'Groom');
+    ['pill-bride', 'pill-groom'].forEach(id => {
+      const b = document.getElementById(id);
+      if (b) b.style.display = restricted ? 'none' : '';
+    });
+    const allPill = document.getElementById('pill-all');
+    if (allPill) {
+      const label = restricted ? (res.viewing === 'Bride' ? 'Brides' : 'Grooms') : 'All';
+      allPill.innerHTML = `${label} <span class="pill-num" id="all-count">${allProfiles.length}</span>`;
+    }
 
     populateFilters();
     filtered = [...allProfiles].sort((a, b) => (parseDOB(b['Date Of Birth']) || 0) - (parseDOB(a['Date Of Birth']) || 0));
@@ -668,10 +683,37 @@ async function api(action, payload = {}) {
 // APP INIT & LOGIN  (email + one-time code)
 // =====================================================================
 
+// The session lives in localStorage so every tab of this site shares it
+// (opening a shared profile link in a new tab doesn't ask for a new OTP).
+// It expires after 2 hours, matching the server-side session.
+const SESSION_MAX_MS = 2 * 60 * 60 * 1000;
+
+function storeSession(token, role, email) {
+  try {
+    localStorage.setItem('km_token', token);
+    localStorage.setItem('km_role',  role);
+    localStorage.setItem('km_email', email);
+    localStorage.setItem('km_exp',   String(Date.now() + SESSION_MAX_MS));
+  } catch (e) { /* storage blocked: session works in this tab only */ }
+}
+
+function readStoredSession() {
+  try {
+    const exp = parseInt(localStorage.getItem('km_exp') || '0', 10);
+    const token = localStorage.getItem('km_token');
+    if (!token || !exp || Date.now() > exp) { clearSession(); return null; }
+    return {
+      token,
+      role:  localStorage.getItem('km_role'),
+      email: localStorage.getItem('km_email'),
+    };
+  } catch (e) { return null; }
+}
+
 function clearSession() {
-  sessionStorage.removeItem('km_token');
-  sessionStorage.removeItem('km_role');
-  sessionStorage.removeItem('km_email');
+  try {
+    ['km_token', 'km_role', 'km_email', 'km_exp'].forEach(k => localStorage.removeItem(k));
+  } catch (e) {}
   sessionToken = null; currentRole = null; sessionEmail = null;
 }
 
@@ -742,24 +784,30 @@ function showLoginScreen(notice) {
   setTimeout(() => document.getElementById('login-email')?.focus(), 50);
 }
 
-function setLoginMsg(step, text, isError = true, withRegisterLink = false) {
+function setLoginMsg(step, text, isError = true, extra = '') {
   const m = document.getElementById(`login-${step}-msg`);
   if (!m) return;
   m.textContent = text || '';
   m.className = 'login-msg' + (text ? (isError ? ' error' : ' info') : '');
-  if (text && withRegisterLink) {
-    const box = document.createElement('div');
-    box.className = 'login-register';
-    box.appendChild(document.createTextNode('New here? '));
+  if (!text || !extra) return;
+
+  const box = document.createElement('div');
+  box.className = 'login-register';
+  const link = (href, label) => {
     const a = document.createElement('a');
-    a.href = REGISTER_URL;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.textContent = 'Register your profile';
-    box.appendChild(a);
-    box.appendChild(document.createTextNode(' using our form, then sign in with the same email.'));
-    m.appendChild(box);
+    a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = label;
+    return a;
+  };
+  if (extra === 'register') {
+    box.append('New here? ', link(REGISTER_URL, 'Register your profile'),
+               ' using our form, then sign in with the same email.');
+  } else if (extra === 'contact') {
+    const msg = encodeURIComponent('Hello Kamala! I have registered and would like to activate my account. My email: ' +
+      (document.getElementById('login-email')?.value.trim() || ''));
+    box.append('Already registered? ', link(`https://wa.me/${WA_NUMBER}?text=${msg}`, 'Contact us on WhatsApp'),
+               ' to confirm your payment.');
   }
+  m.appendChild(box);
 }
 
 function setBusy(btnId, busy, idleText) {
@@ -807,7 +855,7 @@ async function sendOtp(isResend = false) {
   if (!isResend) setBusy('login-send-btn', true);
   try {
     const res = await api('requestOtp', { email });
-    if (!res.ok) { setLoginMsg(msgStep, res.error || 'Could not send code.', true, !!res.notRegistered); return; }
+    if (!res.ok) { setLoginMsg(msgStep, res.error || 'Could not send code.', true, res.notRegistered ? 'register' : (res.notPaid ? 'contact' : '')); return; }
     document.getElementById('login-email-shown').textContent = email;
     document.getElementById('login-step-email').style.display = 'none';
     document.getElementById('login-step-otp').style.display = '';
@@ -842,9 +890,7 @@ async function verifyOtp() {
     sessionToken = res.token;
     currentRole  = res.role;
     sessionEmail = res.email;
-    sessionStorage.setItem('km_token', res.token);
-    sessionStorage.setItem('km_role',  res.role);
-    sessionStorage.setItem('km_email', res.email);
+    storeSession(res.token, res.role, res.email);
     clearInterval(_resendTimer);
     initApp();
   } catch (e) {
@@ -892,12 +938,24 @@ function shareOnWhatsApp(uid) {
   const p = allProfiles.find(x => x['Unique ID'].trim() === uid);
   const name = p ? p['Name'] : uid;
   const type = p ? p['Filling the Form Of'] : '';
-  const link = profileLink(uid);
 
-  const msg =
+  // The sender's own profile: prefer the opposite kind to the one they liked
+  const me = myProfiles.find(m => m.type !== type) || myProfiles[0] || null;
+
+  let msg =
     `Hello Kamala! We are interested in this profile, Please find the profile details below:\n\n` +
     `*${name}* (${type})\n` +
-    `Profile ID: *${uid}* - ${link}`;
+    `Profile ID: *${uid}* - ${profileLink(uid)}`;
+  if (me) {
+    msg += `\n\nOur profile:\n*${me.name}* (${me.type})\n` +
+           `Profile ID: *${me.uid}* - ${profileLink(me.uid)}`;
+  }
+
+  // Record the click in the admin's "Interests" sheet (fire-and-forget, so the
+  // WhatsApp window still opens instantly and isn't blocked by the browser)
+  if (sessionToken && currentRole !== 'admin') {
+    api('logInterest', { token: sessionToken, toUid: uid }).catch(() => {});
+  }
 
   const url = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
   window.open(url, '_blank', 'noopener');
@@ -1068,14 +1126,19 @@ function closeHoroOnBg(e) {
 // =====================================================================
 
 (function startup() {
-  const token = sessionStorage.getItem('km_token');
-  const role  = sessionStorage.getItem('km_role');
-  if (token && role) {
-    sessionToken = token;
-    currentRole  = role;
-    sessionEmail = sessionStorage.getItem('km_email');
+  const saved = readStoredSession();
+  if (saved && saved.role) {
+    sessionToken = saved.token;
+    currentRole  = saved.role;
+    sessionEmail = saved.email;
     initApp();
   } else {
     showLoginScreen();
   }
 })();
+
+// If you sign in or out in one tab, other open tabs follow
+window.addEventListener('storage', e => {
+  if (e.key === 'km_token' && !e.newValue) location.reload();                 // signed out elsewhere
+  if (e.key === 'km_token' && e.newValue && !sessionToken) location.reload(); // signed in elsewhere
+});
