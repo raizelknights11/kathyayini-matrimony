@@ -16,7 +16,6 @@ const HIDDEN_FOR_GUEST = [
   'Email Address',
   "Father's Phone Number",
   "Mother's Phone Number",
-  'Parents Phone Number',
 ];
 
 // =====================================================================
@@ -731,6 +730,10 @@ function initApp() {
       <span class="logout-sep">·</span>
       <span class="logout-action">Sign Out</span>`;
   }
+  if (currentRole === 'admin') {
+    document.getElementById('bottom-nav').style.display = 'flex';
+    document.body.classList.add('has-nav');
+  }
   loadData();
 }
 
@@ -1142,3 +1145,97 @@ window.addEventListener('storage', e => {
   if (e.key === 'km_token' && !e.newValue) location.reload();                 // signed out elsewhere
   if (e.key === 'km_token' && e.newValue && !sessionToken) location.reload(); // signed in elsewhere
 });
+
+// =====================================================================
+// ADMIN SECTIONS — bottom bar: Profiles · Interests · Payments
+// =====================================================================
+const escHtml = v => String(v == null ? '' : v).replace(/[&<>"']/g,
+  c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const INTEREST_STATUSES = ['New', 'Talking', 'Meeting', 'Declined', 'Matched', 'Closed'];
+let _adminView = 'profiles', _admin = null;
+
+function showView(v) {
+  _adminView = v;
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  const onProfiles = v === 'profiles';
+  ['controls-bar', 'grid'].forEach(id => document.getElementById(id).style.display = onProfiles ? '' : 'none');
+  document.querySelector('.results-bar').style.display = onProfiles ? '' : 'none';
+  const box = document.getElementById('admin-view');
+  box.style.display = onProfiles ? 'none' : 'block';
+  window.scrollTo(0, 0);
+  if (!onProfiles) loadAdminData();
+}
+
+async function loadAdminData() {
+  const box = document.getElementById('admin-view');
+  if (!_admin) box.innerHTML = '<div class="a-empty">Loading…</div>';
+  try {
+    const res = await api('adminData', { token: sessionToken });
+    if (!res.ok) throw new Error(res.error);
+    _admin = res;
+    renderAdminView();
+  } catch (e) {
+    box.innerHTML = '<div class="a-empty">Could not load. Check your connection and try again.</div>';
+  }
+}
+
+function renderAdminView() {
+  const box = document.getElementById('admin-view');
+  box.innerHTML = _adminView === 'interests' ? renderInterests() : renderPayments();
+}
+
+function renderInterests() {
+  const list = _admin.interests;
+  if (!list.length) return '<h2 class="a-title">Interests</h2><div class="a-empty">No interests yet.</div>';
+  return '<h2 class="a-title">Interests</h2>' + list.map(i => `
+    <div class="a-card">
+      <div class="a-row"><strong>${escHtml(i.fromName || 'Unknown')} → ${escHtml(i.toName)}</strong>
+        <span class="a-date">${escHtml(i.date)}</span></div>
+      <div class="a-sub">${escHtml(i.fromUid)} → ${escHtml(i.toUid)}</div>
+      <div class="a-actions">
+        <select class="filter-btn st-${escHtml(i.status)}" onchange="setInterestStatus(${i.row}, this.value)">
+          ${INTEREST_STATUSES.map(s => `<option${s === i.status ? ' selected' : ''}>${s}</option>`).join('')}
+        </select>
+        <button class="a-btn" onclick="openModal('${escHtml(i.fromUid)}')">View sender</button>
+        <button class="a-btn" onclick="openModal('${escHtml(i.toUid)}')">View profile</button>
+      </div>
+    </div>`).join('');
+}
+
+function paymentCard(p, i, tag) {
+  const wa = String(p.phone || '').replace(/\D/g, '');
+  return `<div class="a-card">
+    <div class="a-row"><strong>${escHtml(p.name)}</strong><span class="a-date">${escHtml(p.type)} · ${escHtml(p.uid)}</span></div>
+    <div class="a-sub">${p.until ? 'Paid until ' + escHtml(p.until) : tag}
+      ${wa ? ` · <a href="https://wa.me/91${wa.slice(-10)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}</div>
+    <div class="a-actions">
+      <input type="date" class="filter-btn" id="until-${tag}-${i}" aria-label="Paid until">
+      <button class="a-btn a-primary" onclick="markPaid('${escHtml(p.uid)}','until-${tag}-${i}',this)">Mark paid</button>
+    </div></div>`;
+}
+
+function renderPayments() {
+  const sec = (title, list, tag) => `<h3 class="a-h3">${title} (${list.length})</h3>` +
+    (list.length ? list.map((p, i) => paymentCard(p, i, tag)).join('') : '<div class="a-empty">None</div>');
+  return '<h2 class="a-title">Payments</h2>' +
+    sec('Registered, not paid', _admin.unpaid, 'unpaid') +
+    sec('Renewals due in 7 days', _admin.due, 'due') +
+    sec('Access expired', _admin.expired, 'expired');
+}
+
+async function setInterestStatus(row, status) {
+  try { await api('adminAction', { token: sessionToken, what: 'interestStatus', row, status }); }
+  catch (e) { alert('Could not save. Please try again.'); }
+  loadAdminData();
+}
+
+async function markPaid(uid, inputId, btn) {
+  const d = document.getElementById(inputId).value;           // yyyy-mm-dd
+  const until = d ? d.split('-').reverse().join('/') : '';     // DD/MM/YYYY
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res = await api('adminAction', { token: sessionToken, what: 'markPaid', uid, until });
+    if (!res.ok) throw new Error(res.error);
+  } catch (e) { alert('Could not save: ' + (e.message || 'try again')); }
+  loadAdminData();
+}
