@@ -74,6 +74,15 @@
   </div>
 </div>
 
+<!-- Admin sections (Interests / Payments), shown by the bottom bar -->
+<div class="admin-view" id="admin-view" style="display:none"></div>
+
+<nav class="bottom-nav" id="bottom-nav" style="display:none" aria-label="Admin sections">
+  <button class="nav-tab active" data-view="profiles" onclick="showView('profiles')"><span>👥</span>Profiles</button>
+  <button class="nav-tab" data-view="interests" onclick="showView('interests')"><span>💌</span>Interests</button>
+  <button class="nav-tab" data-view="payments" onclick="showView('payments')"><span>💳</span>Payments</button>
+</nav>
+
 <!-- Profile Detail Modal -->
 <div class="modal-overlay" id="modal-overlay">
   <button class="modal-nav-btn modal-nav-prev" id="modal-prev-btn" onclick="navigateModal(-1)" title="Previous profile">‹</button>
