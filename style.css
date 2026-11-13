@@ -1294,3 +1294,6 @@ body.has-nav { padding-bottom: 76px; }
 .a-btn:disabled { opacity: 0.6; }
 .a-empty { text-align: center; color: var(--text-dim); padding: 24px 0; font-size: 14px; }
 .st-New { font-weight: 600; } .st-Matched { color: var(--sage); } .st-Declined, .st-Closed { color: var(--text-dim); }
+
+.a-danger { padding: 18px 16px 24px; text-align: center; border-top: 1px solid var(--border); margin-top: 12px; }
+.a-danger-btn { color: var(--rose); border-color: var(--rose); min-height: 44px; }
