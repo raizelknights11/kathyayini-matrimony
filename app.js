@@ -454,6 +454,11 @@ async function openModal(uid) {
     leftCol.style.flexBasis = newWidth + 'px';
   }
 
+  if (currentRole === 'admin') {
+    document.getElementById('modal-body').insertAdjacentHTML('beforeend',
+      `<div class="a-danger"><button class="a-btn a-danger-btn" onclick="deleteProfile('${uid}')">🗑 Delete profile</button></div>`);
+  }
+
   // Update prev/next nav button states based on position in filtered list
   const prevBtn = document.getElementById('modal-prev-btn');
   const nextBtn = document.getElementById('modal-next-btn');
@@ -628,6 +633,8 @@ async function loadData() {
     myProfiles  = res.myProfiles || [];
     try { localStorage.setItem('km_role', res.role); } catch (e) {}
     allProfiles = (res.profiles || []).filter(p => p['Name'] && p['Name'].trim());
+    allProfiles.forEach(tidyCase);
+    if (res.role === 'admin' && !_admin) loadAdminData();   // warm the Interests/Payments data
 
     const brides = allProfiles.filter(p => p['Filling the Form Of'] === 'Bride').length;
     const grooms = allProfiles.filter(p => p['Filling the Form Of'] === 'Groom').length;
@@ -1154,28 +1161,31 @@ const escHtml = v => String(v == null ? '' : v).replace(/[&<>"']/g,
 const INTEREST_STATUSES = ['New', 'Talking', 'Meeting', 'Declined', 'Matched', 'Closed'];
 let _adminView = 'profiles', _admin = null;
 
+let _adminAt = 0;
+
 function showView(v) {
   _adminView = v;
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.view === v));
   const onProfiles = v === 'profiles';
   ['controls-bar', 'grid'].forEach(id => document.getElementById(id).style.display = onProfiles ? '' : 'none');
   document.querySelector('.results-bar').style.display = onProfiles ? '' : 'none';
-  const box = document.getElementById('admin-view');
-  box.style.display = onProfiles ? 'none' : 'block';
+  document.getElementById('admin-view').style.display = onProfiles ? 'none' : 'block';
   window.scrollTo(0, 0);
-  if (!onProfiles) loadAdminData();
+  if (onProfiles) return;
+  if (_admin) renderAdminView();                              // instant, from memory
+  if (!_admin || Date.now() - _adminAt > 20000) loadAdminData(); // refresh quietly
 }
 
 async function loadAdminData() {
   const box = document.getElementById('admin-view');
-  if (!_admin) box.innerHTML = '<div class="a-empty">Loading…</div>';
+  if (!_admin && _adminView !== 'profiles') box.innerHTML = '<div class="a-empty">Loading…</div>';
   try {
     const res = await api('adminData', { token: sessionToken });
     if (!res.ok) throw new Error(res.error);
-    _admin = res;
-    renderAdminView();
+    _admin = res; _adminAt = Date.now();
+    if (_adminView !== 'profiles') renderAdminView();
   } catch (e) {
-    box.innerHTML = '<div class="a-empty">Could not load. Check your connection and try again.</div>';
+    if (!_admin) box.innerHTML = '<div class="a-empty">Could not load. Check your connection and try again.</div>';
   }
 }
 
@@ -1236,6 +1246,59 @@ async function markPaid(uid, inputId, btn) {
   try {
     const res = await api('adminAction', { token: sessionToken, what: 'markPaid', uid, until });
     if (!res.ok) throw new Error(res.error);
+    ['unpaid', 'due', 'expired'].forEach(k => { _admin[k] = _admin[k].filter(x => x.uid !== uid); });
+    renderAdminView();
   } catch (e) { alert('Could not save: ' + (e.message || 'try again')); }
   loadAdminData();
+}
+
+
+// =====================================================================
+// DISPLAY: "RAMESH KUMAR" / "ramesh kumar" → "Ramesh Kumar"
+// =====================================================================
+const NAME_FIELDS  = ['Name', "Father's Name", "Mother's Name"];
+const TIDY_FIELDS  = ['Place of Birth', 'Education', 'Work Field', "Father's Occupation", "Mother's Occupation",
+  "Father's Native", "Mother's Native", 'Siblings', 'Address', 'Staying In', 'Gothra', 'Sub Caste',
+  'Mention your degrees', 'If currently not staying in Bengaluru Please mention the city',
+  'Currently Working-In(Company Name) and As(Position)'];
+
+function titleCase(str) {
+  return str.toLowerCase().replace(/(^|[\s\-\/(.,])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+}
+function tidyCase(p) {
+  NAME_FIELDS.forEach(k => {
+    if (p[k]) p[k] = titleCase(p[k].trim());
+  });
+  TIDY_FIELDS.forEach(k => {
+    const v = p[k];
+    if (!v) return;
+    const allSame = v === v.toUpperCase() || v === v.toLowerCase();
+    const shortAcronym = v === v.toUpperCase() && !/\s/.test(v) && v.length <= 4; // keep MBA, IT, BE
+    const shortLower = v === v.toLowerCase() && !/\s/.test(v) && v.length <= 3; // it → IT, ca → CA
+    if (shortLower) p[k] = v.toUpperCase();
+    else if (allSame && !shortAcronym) p[k] = titleCase(v);
+  });
+}
+
+// =====================================================================
+// ADMIN: DELETE A PROFILE (needs a code emailed to the admin)
+// =====================================================================
+async function deleteProfile(uid) {
+  const p = allProfiles.find(x => x['Unique ID'] === uid);
+  if (!confirm(`Delete ${p ? p['Name'] : uid} (${uid})?\n\nA code will be emailed to you to confirm.`)) return;
+  try {
+    const r1 = await api('deleteOtp', { token: sessionToken, uid });
+    if (!r1.ok) throw new Error(r1.error);
+    const otp = prompt('Enter the 6-digit code sent to your email:');
+    if (!otp) return;
+    const r2 = await api('deleteProfile', { token: sessionToken, uid, otp: otp.trim() });
+    if (!r2.ok) throw new Error(r2.error);
+    allProfiles = allProfiles.filter(x => x['Unique ID'] !== uid);
+    closeModal();
+    applyFilters();
+    if (_admin) loadAdminData();
+    alert('Profile deleted. A copy is kept in the "Deleted Profiles" tab of your sheet.');
+  } catch (e) {
+    alert('Not deleted: ' + (e.message || 'please try again'));
+  }
 }
