@@ -26,6 +26,7 @@ let activeFilter = 'all';
 let currentRole  = null;  // null = not logged in | 'admin' | 'member'
 let sessionToken = null;
 let sessionEmail = null;
+let cardFields   = ["Date Of Birth", "Education", "Work Field", "Staying In", "Gothra"]; // chosen in Settings
 let myProfiles   = [];   // the signed-in member's own profile(s), sent by the server
 let _previewGuest = false;
 
@@ -192,9 +193,9 @@ function getOrCreateCard(p) {
       </div>`
     : '';
 
-  const horoHtml = `<button class="wa-share-btn" onclick="shareOnWhatsApp('${uid}')">
+  const horoHtml = `<button class="wa-share-btn" onclick="${currentRole === 'admin' ? 'shareProfile' : 'shareOnWhatsApp'}('${uid}')">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.555 4.116 1.527 5.845L.057 23.25a.75.75 0 00.916.916l5.405-1.47A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.718 9.718 0 01-4.942-1.348l-.354-.21-3.668.998.975-3.668-.228-.363A9.72 9.72 0 012.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/></svg>
-    Share Interest
+    ${currentRole === 'admin' ? 'Share Profile' : 'Share Interest'}
   </button>`;
 
   const el = document.createElement('div');
@@ -238,6 +239,7 @@ function getOrCreateCard(p) {
         </div>
       </div>
 
+      ${staticHtml(p)}
       <div class="card-scroll">
         <div class="detail-section">
           <div class="section-label">Personal</div>
@@ -456,7 +458,7 @@ async function openModal(uid) {
 
   if (currentRole === 'admin') {
     document.getElementById('modal-body').insertAdjacentHTML('beforeend',
-      `<div class="a-danger"><button class="a-btn a-danger-btn" onclick="deleteProfile('${uid}')">🗑 Delete profile</button></div>`);
+      `<div class="a-danger"><button class="a-btn" onclick="openEdit('${uid}')">✎ Edit profile</button> <button class="a-btn a-danger-btn" onclick="deleteProfile('${uid}')">🗑 Delete profile</button></div>`);
   }
 
   // Update prev/next nav button states based on position in filtered list
@@ -631,6 +633,7 @@ async function loadData() {
     }
     currentRole = res.role;
     myProfiles  = res.myProfiles || [];
+    if (Array.isArray(res.cardFields)) cardFields = res.cardFields;
     try { localStorage.setItem('km_role', res.role); } catch (e) {}
     allProfiles = (res.profiles || []).filter(p => p['Name'] && p['Name'].trim());
     allProfiles.forEach(tidyCase);
@@ -760,8 +763,11 @@ function showLoginScreen(notice) {
 
         <div id="login-step-email">
           <label class="login-label" for="login-email">Registered email address</label>
-          <input class="login-input" type="email" id="login-email" placeholder="you@example.com"
-                 autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false">
+          <div class="login-field">
+            <input class="login-input" type="email" id="login-email" name="email" placeholder="you@example.com"
+                   autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false">
+            <div class="email-suggest" id="email-suggest"></div>
+          </div>
           <div class="login-msg" id="login-email-msg"></div>
           <button class="login-btn" id="login-send-btn" onclick="sendOtp()">Send verification code</button>
         </div>
@@ -781,7 +787,16 @@ function showLoginScreen(notice) {
       </div>`;
     document.body.appendChild(el);
 
-    document.getElementById('login-email').addEventListener('keydown', e => { if (e.key === 'Enter') sendOtp(); });
+    const emailEl = document.getElementById('login-email');
+    emailEl.addEventListener('keydown', e => { if (e.key === 'Enter') { hideEmailSuggest(); sendOtp(); } });
+    emailEl.addEventListener('focus', showEmailSuggest);
+    emailEl.addEventListener('input', showEmailSuggest);
+    document.getElementById('email-suggest').addEventListener('click', e => {
+      const pick = e.target.closest('.es-pick'), del = e.target.closest('.es-x');
+      if (pick) { emailEl.value = pick.dataset.e; hideEmailSuggest(); document.getElementById('login-send-btn').focus(); }
+      if (del)  { forgetEmail(del.dataset.x); showEmailSuggest(); }
+    });
+    document.addEventListener('click', e => { if (!e.target.closest('.login-field')) hideEmailSuggest(); });
     const otpEl = document.getElementById('login-otp');
     otpEl.addEventListener('keydown', e => { if (e.key === 'Enter') verifyOtp(); });
     otpEl.addEventListener('input', () => {
@@ -901,6 +916,7 @@ async function verifyOtp() {
     currentRole  = res.role;
     sessionEmail = res.email;
     storeSession(res.token, res.role, res.email);
+    rememberEmail(res.email);
     clearInterval(_resendTimer);
     initApp();
   } catch (e) {
@@ -1172,6 +1188,7 @@ function showView(v) {
   document.getElementById('admin-view').style.display = onProfiles ? 'none' : 'block';
   window.scrollTo(0, 0);
   if (onProfiles) return;
+  if (v === 'settings') { renderAdminView(); return; }
   if (_admin) renderAdminView();                              // instant, from memory
   if (!_admin || Date.now() - _adminAt > 20000) loadAdminData(); // refresh quietly
 }
@@ -1191,7 +1208,8 @@ async function loadAdminData() {
 
 function renderAdminView() {
   const box = document.getElementById('admin-view');
-  box.innerHTML = _adminView === 'interests' ? renderInterests() : renderPayments();
+  box.innerHTML = _adminView === 'interests' ? renderInterests()
+                : _adminView === 'settings'  ? renderSettings() : renderPayments();
 }
 
 function renderInterests() {
@@ -1301,4 +1319,153 @@ async function deleteProfile(uid) {
   } catch (e) {
     alert('Not deleted: ' + (e.message || 'please try again'));
   }
+}
+
+
+// =====================================================================
+// CARD DETAILS (mobile square cards) + SETTINGS
+// =====================================================================
+const LABELS = { 'Staying In': 'Location', 'ಮಠ - Mata': 'Mata',
+  'Currently Working-In(Company Name) and As(Position)': 'Company & Role', 'Salary(LPA)': 'Salary (LPA)' };
+const fieldLabel = k => LABELS[k] || k.replace(/\(.*?\)/g, '').split(' - ')[0].replace(/^\*+\s*/, '').trim();
+
+function staticHtml(p) {
+  const rows = cardFields.map(k => {
+    const v = k === 'Date Of Birth' ? formatDOB(p[k]) : p[k];
+    return v && v !== '—' ? `<div class="cs-row"><span>${escHtml(fieldLabel(k))}</span>${escHtml(v)}</div>` : '';
+  }).join('');
+  return `<div class="card-static">${rows}</div>`;
+}
+
+const NOT_SELECTABLE = ['Unique ID', 'Timestamp', 'Name', 'Photo 1 - of Bride or Groom', 'Photo 2 - of Bride or Groom',
+  'Horoscope', 'Payment Status', 'Paid Until', 'Status', 'Admin Notes', 'Email Address', 'Phone Number', 'Address',
+  "Father's Phone Number", "Mother's Phone Number"];
+
+function renderSettings() {
+  const keys = []; allProfiles.forEach(p => Object.keys(p).forEach(k => {
+    if (keys.indexOf(k) === -1 && NOT_SELECTABLE.indexOf(k) === -1 && !k.startsWith('* I Her')) keys.push(k);
+  }));
+  return `<h2 class="a-title">Settings</h2>
+    <div class="a-card"><strong>Details shown on profile cards</strong>
+      <div class="a-sub">Tick up to 12 fields. They appear in this order on the phone cards.</div>
+      ${keys.map(k => `<label class="set-row"><input type="checkbox" value="${escHtml(k)}"${cardFields.indexOf(k) > -1 ? ' checked' : ''}> ${escHtml(fieldLabel(k))}</label>`).join('')}
+      <div class="a-actions"><button class="a-btn a-primary" onclick="saveCardFields(this)">Save</button></div>
+    </div>`;
+}
+
+async function saveCardFields(btn) {
+  const fields = [...document.querySelectorAll('.set-row input:checked')].map(i => i.value);
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const r = await api('saveSettings', { token: sessionToken, fields });
+    if (!r.ok) throw new Error(r.error);
+    cardFields = fields;
+    Object.keys(_cardCache).forEach(k => delete _cardCache[k]);
+    applyFilters();
+    btn.textContent = 'Saved ✓';
+  } catch (e) { alert('Could not save: ' + (e.message || 'try again')); btn.textContent = 'Save'; }
+  btn.disabled = false;
+}
+
+// =====================================================================
+// ADMIN: SHARE PROFILE (opens WhatsApp's contact picker) + EDIT PROFILE
+// =====================================================================
+function shareProfile(uid) {
+  const p = allProfiles.find(x => x['Unique ID'].trim() === uid);
+  const msg = `Please find the profile details below:\n\n*${p ? p['Name'] : uid}* (${p ? p['Filling the Form Of'] : ''})\n` +
+              `Profile ID: *${uid}* - ${profileLink(uid)}`;
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank', 'noopener');
+}
+
+const EDIT_SECTIONS = {
+  'Personal': ['Name', 'Date Of Birth', 'Time Of Birth', 'Place of Birth', 'Marital Status', 'Nakshatra', 'Charana', 'Rashi',
+    'Gothra', 'Sub Caste', 'ಮಠ - Mata', 'Height (in feet) - example 5 / 5`2 / 5`11', 'Personal Habits', 'Language Preference'],
+  'Professional': ['Education', 'Mention your degrees', 'Work Field', 'Currently Working-In(Company Name) and As(Position)', 'Salary(LPA)'],
+  'Family': ["Father's Name", "Father's Occupation", "Father's Phone Number", "Father's Native", "Mother's Name",
+    "Mother's Occupation", "Mother's Phone Number", "Mother's Native", 'Siblings'],
+  'Preferences': ['Age Gap', 'Will agree on Same Gothra', 'Will agree on any Bhramins and Mata', 'Required Martial Status',
+    'Abroad Relocation', 'Local Relocation', 'Planning To Relocate'],
+  'Location & Contact': ['Staying In', 'If currently not staying in Bengaluru Please mention the city', 'Address', 'Phone Number', 'Email Address'],
+  'Admin': ['Payment Status', 'Paid Until', 'Status', 'Admin Notes'],
+};
+
+function openEdit(uid) {
+  const p = allProfiles.find(x => x['Unique ID'] === uid);
+  if (!p) return;
+  let n = 0;
+  const secs = Object.entries(EDIT_SECTIONS).map(([title, keys], si) => {
+    const fields = keys.filter(k => k in p).map(k => {
+      const id = 'dl' + (n++);
+      const opts = [...new Set(allProfiles.map(x => x[k]).filter(Boolean))].slice(0, 60);
+      return `<label class="ed-f"><span>${escHtml(fieldLabel(k))}</span>
+        <input data-k="${escHtml(k)}" data-orig="${escHtml(p[k] || '')}" value="${escHtml(p[k] || '')}" list="${id}">
+        <datalist id="${id}">${opts.map(o => `<option value="${escHtml(o)}">`).join('')}</datalist></label>`;
+    }).join('');
+    return fields ? `<details class="ed-sec"${si === 0 ? ' open' : ''}><summary>${title}</summary>${fields}</details>` : '';
+  }).join('');
+  const el = document.createElement('div');
+  el.id = 'edit-panel'; el.className = 'edit-panel';
+  el.innerHTML = `<div class="ed-box"><div class="ed-head"><strong>Edit ${escHtml(p['Name'])}</strong>
+    <button class="a-btn" onclick="closeEdit()">✕</button></div><div class="ed-body">${secs}</div>
+    <div class="ed-foot"><button class="a-btn a-primary" onclick="saveEdit('${escHtml(uid)}',this)">Save changes</button></div></div>`;
+  document.body.appendChild(el);
+}
+const closeEdit = () => document.getElementById('edit-panel')?.remove();
+
+async function saveEdit(uid, btn) {
+  const changes = {};
+  document.querySelectorAll('#edit-panel input[data-k]').forEach(i => {
+    if (i.value !== i.dataset.orig) changes[i.dataset.k] = i.value.trim();
+  });
+  if (!Object.keys(changes).length) { closeEdit(); return; }
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const r = await api('updateProfile', { token: sessionToken, uid, changes });
+    if (!r.ok) throw new Error(r.error);
+    const p = allProfiles.find(x => x['Unique ID'] === uid);
+    Object.assign(p, changes);
+    delete _cardCache[uid];
+    closeEdit(); applyFilters(); openModal(uid);
+  } catch (e) { alert('Could not save: ' + (e.message || 'try again')); btn.disabled = false; btn.textContent = 'Save changes'; }
+}
+
+// =====================================================================
+// SWIPE through card photos
+// =====================================================================
+(function () {
+  let sx = 0, sy = 0, el = null;
+  document.addEventListener('touchstart', e => {
+    el = e.target.closest('.image-slider');
+    if (el) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (!el) return;
+    const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+    const id = el.id.replace('-slider', ''); el = null;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) (dx < 0 ? nextSlide : prevSlide)(id);
+  }, { passive: true });
+})();
+
+
+// =====================================================================
+// LOGIN: suggest emails previously signed in with on this device
+// =====================================================================
+const EMAIL_KEY = 'km_emails';
+function savedEmails() { try { return JSON.parse(localStorage.getItem(EMAIL_KEY) || '[]'); } catch (e) { return []; } }
+function rememberEmail(e) {
+  try { localStorage.setItem(EMAIL_KEY, JSON.stringify([e, ...savedEmails().filter(x => x !== e)].slice(0, 5))); } catch (err) {}
+}
+function forgetEmail(e) {
+  try { localStorage.setItem(EMAIL_KEY, JSON.stringify(savedEmails().filter(x => x !== e))); } catch (err) {}
+}
+function hideEmailSuggest() { const b = document.getElementById('email-suggest'); if (b) b.style.display = 'none'; }
+function showEmailSuggest() {
+  const box = document.getElementById('email-suggest');
+  const typed = document.getElementById('login-email').value.trim().toLowerCase();
+  const list = savedEmails().filter(e => e.includes(typed) && e !== typed);
+  if (!box || !list.length) { hideEmailSuggest(); return; }
+  box.innerHTML = list.map(e => `<div class="es-row">
+    <button type="button" class="es-pick" data-e="${escHtml(e)}">${escHtml(e)}</button>
+    <button type="button" class="es-x" data-x="${escHtml(e)}" aria-label="Remove ${escHtml(e)}">✕</button></div>`).join('');
+  box.style.display = 'block';
 }
