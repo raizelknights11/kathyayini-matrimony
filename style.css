@@ -1359,3 +1359,16 @@ body.has-nav { padding-bottom: 76px; }
 .sp-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .sp-actions .a-btn { display: inline-flex; align-items: center; background: var(--card); text-decoration: none; }
 .sp-actions .a-primary { background: var(--gold); }
+
+/* ── Settings: single-line rows that open on tap ──────────────────── */
+.set-acc { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; }
+.set-acc summary { list-style: none; display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 14px; cursor: pointer; }
+.set-acc summary::-webkit-details-marker { display: none; }
+.set-acc summary::after { content: '›'; margin-left: auto; font-size: 20px; color: var(--text-dim); transition: transform .2s; }
+.set-acc[open] summary::after { transform: rotate(90deg); }
+.sa-t { font-weight: 600; white-space: nowrap; }
+.sa-d { flex: 1; min-width: 0; font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sa-n { font-size: 12px; color: var(--gold); white-space: nowrap; }
+.sa-body { padding: 0 14px 14px; border-top: 1px solid var(--border); }
+.sp-note { max-width: 320px; text-align: center; font-size: 13px; color: #fff; background: rgba(163,45,45,.85); border-radius: 8px; padding: 8px 12px; }
+@media (max-width: 480px) { .sa-d { display: none; } }
