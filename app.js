@@ -689,7 +689,11 @@ async function api(action, payload = {}) {
     body: JSON.stringify({ action, ...payload }),
   });
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  return resp.json();
+  const data = await resp.json();
+  if (data && data.error === 'Unknown action') {
+    throw new Error('The server code is out of date. Paste the latest Code.gs into Apps Script and redeploy it as a New version.');
+  }
+  return data;
 }
 
 // =====================================================================
@@ -1347,20 +1351,18 @@ const NOT_SELECTABLE = ['Unique ID', 'Timestamp', 'Name', 'Photo 1 - of Bride or
 
 function renderSettings() {
   const keys = []; allProfiles.forEach(p => Object.keys(p).forEach(k => {
-    if (keys.indexOf(k) === -1 && NOT_SELECTABLE.indexOf(k) === -1 && !k.startsWith('* I Her')) keys.push(k);
+    if (k && k.trim() && keys.indexOf(k) === -1 && NOT_SELECTABLE.indexOf(k) === -1 && !k.startsWith('* I Her')) keys.push(k);
   }));
   const list = (cls, chosen) => keys.map(k => `<label class="set-row"><input type="checkbox" class="${cls}" value="${escHtml(k)}"${chosen.indexOf(k) > -1 ? ' checked' : ''}> ${escHtml(fieldLabel(k))}</label>`).join('');
-  return `<h2 class="a-title">Settings</h2>
-    <div class="a-card"><strong>Details shown on profile cards</strong>
-      <div class="a-sub">Tick up to 12 fields. They appear in this order on the phone cards.</div>
-      ${list('set-card', cardFields)}
-      <div class="a-actions"><button class="a-btn a-primary" onclick="saveCardFields(this)">Save</button></div>
-    </div>
-    <div class="a-card"><strong>Details on the WhatsApp Status image</strong>
-      <div class="a-sub">Tick up to 7 fields. Phone numbers and addresses are never offered.</div>
-      ${list('set-status', statusFields)}
-      <div class="a-actions"><button class="a-btn a-primary" onclick="saveStatusFields(this)">Save</button></div>
-    </div>`;
+  const row = (title, desc, cls, chosen, fn) => `
+    <details class="set-acc">
+      <summary><span class="sa-t">${title}</span><span class="sa-d">${desc}</span><span class="sa-n">${chosen.length} selected</span></summary>
+      <div class="sa-body">${list(cls, chosen)}
+        <div class="a-actions"><button class="a-btn a-primary" onclick="${fn}(this)">Save</button></div></div>
+    </details>`;
+  return `<h2 class="a-title">Settings</h2>` +
+    row('Profile cards', 'Details on each phone card, up to 12', 'set-card', cardFields, 'saveCardFields') +
+    row('WhatsApp Status image', 'Details on the shared image, up to 7', 'set-status', statusFields, 'saveStatusFields');
 }
 
 async function saveCardFields(btn) {
@@ -1512,8 +1514,12 @@ async function shareStatus(uid, btn) {
   if (!p) return;
   const label = btn.textContent; btn.disabled = true; btn.textContent = 'Preparing…';
   try {
-    let photo = null;
-    try { const r = await api('photoData', { token: sessionToken, uid }); if (r.ok && r.photo) photo = await loadImg(r.photo); } catch (e) {}
+    let photo = null, note = '';
+    try {
+      const r = await api('photoData', { token: sessionToken, uid });
+      if (r.ok && r.photo) { photo = await loadImg(r.photo); if (!photo) note = 'The photo could not be drawn.'; }
+      else note = r.reason || r.error || 'The photo could not be loaded.';
+    } catch (e) { note = e.message || 'The photo could not be loaded.'; }
     try { await document.fonts.load('500 40px "DM Sans"'); } catch (e) {}
 
     const W = 1080, H = 1920, F = '"DM Sans", "Noto Sans Kannada", sans-serif';
@@ -1557,14 +1563,14 @@ async function shareStatus(uid, btn) {
     g.fillText('Message us on WhatsApp to connect', W / 2, 1884);
 
     const blob = await new Promise(r => c.toBlob(r, 'image/png'));
-    showStatusPreview(blob, `profile-${uid}.png`);
+    showStatusPreview(blob, `profile-${uid}.png`, note);
   } catch (e) {
     alert('Could not make the image: ' + (e.message || 'try again'));
   }
   btn.disabled = false; btn.textContent = label;
 }
 
-function showStatusPreview(blob, name) {
+function showStatusPreview(blob, name, note) {
   closeStatusPreview();
   const url = URL.createObjectURL(blob);
   const file = new File([blob], name, { type: 'image/png' });
@@ -1572,6 +1578,7 @@ function showStatusPreview(blob, name) {
   const el = document.createElement('div');
   el.id = 'status-preview'; el.className = 'status-preview';
   el.innerHTML = `<div class="sp-box"><img src="${url}" alt="Status image preview">
+    ${note ? `<div class="sp-note">Photo not added: ${escHtml(note)}</div>` : ''}
     <div class="sp-actions">
       ${canShare ? '<button class="a-btn a-primary" id="sp-share">Share</button>' : ''}
       <a class="a-btn" href="${url}" download="${escHtml(name)}">Save image</a>
