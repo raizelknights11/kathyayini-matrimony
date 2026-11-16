@@ -1351,3 +1351,11 @@ body.has-nav { padding-bottom: 76px; }
   font: 14px 'DM Sans', sans-serif; color: var(--text); cursor: pointer; overflow: hidden; text-overflow: ellipsis; }
 .es-x { width: 46px; min-height: 46px; background: none; border: 0; color: var(--text-dim); font-size: 13px; cursor: pointer; }
 .es-pick:hover, .es-pick:focus-visible { background: var(--surface); }
+
+/* ── Status image preview ─────────────────────────────────────────── */
+.status-preview { position: fixed; inset: 0; z-index: 3500; background: rgba(26,16,10,.8); display: flex; align-items: center; justify-content: center; padding: 12px; }
+.sp-box { display: flex; flex-direction: column; align-items: center; gap: 12px; max-height: 100%; }
+.sp-box img { max-height: 72vh; max-width: 100%; border-radius: 12px; border: 2px solid var(--gold); background: #fff; }
+.sp-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.sp-actions .a-btn { display: inline-flex; align-items: center; background: var(--card); text-decoration: none; }
+.sp-actions .a-primary { background: var(--gold); }
