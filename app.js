@@ -27,6 +27,7 @@ let currentRole  = null;  // null = not logged in | 'admin' | 'member'
 let sessionToken = null;
 let sessionEmail = null;
 let cardFields   = ["Date Of Birth", "Education", "Work Field", "Staying In", "Gothra"]; // chosen in Settings
+let statusFields = ["Date Of Birth", "Nakshatra", "Gothra", "Education", "Staying In"]; // for the Status image
 let myProfiles   = [];   // the signed-in member's own profile(s), sent by the server
 let _previewGuest = false;
 
@@ -139,9 +140,11 @@ function parseDOB(dob) {
   let d;
   if (parts.length === 3) {
     const n = parts.map(Number);
-    if      (n[2] > 1900) d = new Date(n[2], n[0] - 1, n[1]);
+    if      (n[2] > 1900) d = null;
     else if (n[0] > 1900) d = new Date(n[0], n[1] - 1, n[2]);
     else                  d = new Date(n[2], n[1] - 1, n[0]);
+    // a/b/YYYY: day first (India). Month first only when the second number can't be a month.
+    if (n[2] > 1900) d = n[1] > 12 ? new Date(n[2], n[0] - 1, n[1]) : new Date(n[2], n[1] - 1, n[0]);
   } else { d = new Date(t); }
   return isNaN(d) ? null : d;
 }
@@ -458,7 +461,7 @@ async function openModal(uid) {
 
   if (currentRole === 'admin') {
     document.getElementById('modal-body').insertAdjacentHTML('beforeend',
-      `<div class="a-danger"><button class="a-btn" onclick="openEdit('${uid}')">✎ Edit profile</button> <button class="a-btn a-danger-btn" onclick="deleteProfile('${uid}')">🗑 Delete profile</button></div>`);
+      `<div class="a-danger"><button class="a-btn a-primary" onclick="shareStatus('${uid}', this)">Share to Status</button> <button class="a-btn" onclick="openEdit('${uid}')">✎ Edit profile</button> <button class="a-btn a-danger-btn" onclick="deleteProfile('${uid}')">🗑 Delete profile</button></div>`);
   }
 
   // Update prev/next nav button states based on position in filtered list
@@ -634,6 +637,7 @@ async function loadData() {
     currentRole = res.role;
     myProfiles  = res.myProfiles || [];
     if (Array.isArray(res.cardFields)) cardFields = res.cardFields;
+    if (Array.isArray(res.statusFields)) statusFields = res.statusFields;
     try { localStorage.setItem('km_role', res.role); } catch (e) {}
     allProfiles = (res.profiles || []).filter(p => p['Name'] && p['Name'].trim());
     allProfiles.forEach(tidyCase);
@@ -1345,23 +1349,42 @@ function renderSettings() {
   const keys = []; allProfiles.forEach(p => Object.keys(p).forEach(k => {
     if (keys.indexOf(k) === -1 && NOT_SELECTABLE.indexOf(k) === -1 && !k.startsWith('* I Her')) keys.push(k);
   }));
+  const list = (cls, chosen) => keys.map(k => `<label class="set-row"><input type="checkbox" class="${cls}" value="${escHtml(k)}"${chosen.indexOf(k) > -1 ? ' checked' : ''}> ${escHtml(fieldLabel(k))}</label>`).join('');
   return `<h2 class="a-title">Settings</h2>
     <div class="a-card"><strong>Details shown on profile cards</strong>
       <div class="a-sub">Tick up to 12 fields. They appear in this order on the phone cards.</div>
-      ${keys.map(k => `<label class="set-row"><input type="checkbox" value="${escHtml(k)}"${cardFields.indexOf(k) > -1 ? ' checked' : ''}> ${escHtml(fieldLabel(k))}</label>`).join('')}
+      ${list('set-card', cardFields)}
       <div class="a-actions"><button class="a-btn a-primary" onclick="saveCardFields(this)">Save</button></div>
+    </div>
+    <div class="a-card"><strong>Details on the WhatsApp Status image</strong>
+      <div class="a-sub">Tick up to 7 fields. Phone numbers and addresses are never offered.</div>
+      ${list('set-status', statusFields)}
+      <div class="a-actions"><button class="a-btn a-primary" onclick="saveStatusFields(this)">Save</button></div>
     </div>`;
 }
 
 async function saveCardFields(btn) {
-  const fields = [...document.querySelectorAll('.set-row input:checked')].map(i => i.value);
+  const fields = [...document.querySelectorAll('.set-card:checked')].map(i => i.value);
   btn.disabled = true; btn.textContent = 'Saving…';
   try {
-    const r = await api('saveSettings', { token: sessionToken, fields });
+    const r = await api('saveSettings', { token: sessionToken, fields, which: 'card' });
     if (!r.ok) throw new Error(r.error);
     cardFields = fields;
     Object.keys(_cardCache).forEach(k => delete _cardCache[k]);
     applyFilters();
+    btn.textContent = 'Saved ✓';
+  } catch (e) { alert('Could not save: ' + (e.message || 'try again')); btn.textContent = 'Save'; }
+  btn.disabled = false;
+}
+
+async function saveStatusFields(btn) {
+  const fields = [...document.querySelectorAll('.set-status:checked')].map(i => i.value);
+  if (fields.length > 7) { alert('Choose up to 7 fields for the Status image.'); return; }
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const r = await api('saveSettings', { token: sessionToken, fields, which: 'status' });
+    if (!r.ok) throw new Error(r.error);
+    statusFields = fields;
     btn.textContent = 'Saved ✓';
   } catch (e) { alert('Could not save: ' + (e.message || 'try again')); btn.textContent = 'Save'; }
   btn.disabled = false;
@@ -1469,3 +1492,95 @@ function showEmailSuggest() {
     <button type="button" class="es-x" data-x="${escHtml(e)}" aria-label="Remove ${escHtml(e)}">✕</button></div>`).join('');
   box.style.display = 'block';
 }
+
+
+// =====================================================================
+// WHATSAPP STATUS IMAGE — drawn on a canvas, shared through the phone's share menu
+// =====================================================================
+function fitText(ctx, text, maxW) {
+  let t = String(text);
+  while (t.length > 1 && ctx.measureText(t).width > maxW) t = t.slice(0, -1);
+  return t === String(text) ? t : t.trimEnd() + '…';
+}
+
+function loadImg(src) {
+  return new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+}
+
+async function shareStatus(uid, btn) {
+  const p = allProfiles.find(x => x['Unique ID'] === uid);
+  if (!p) return;
+  const label = btn.textContent; btn.disabled = true; btn.textContent = 'Preparing…';
+  try {
+    let photo = null;
+    try { const r = await api('photoData', { token: sessionToken, uid }); if (r.ok && r.photo) photo = await loadImg(r.photo); } catch (e) {}
+    try { await document.fonts.load('500 40px "DM Sans"'); } catch (e) {}
+
+    const W = 1080, H = 1920, F = '"DM Sans", "Noto Sans Kannada", sans-serif';
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    g.fillStyle = '#fffaf4'; g.fillRect(0, 0, W, H);
+
+    g.fillStyle = '#7a5218'; g.fillRect(0, 0, W, 130);                       // header bar
+    g.fillStyle = '#fff'; g.font = `500 56px ${F}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('Kathyayini Matrimony', W / 2, 66);
+
+    g.fillStyle = '#ede4d8'; g.fillRect(0, 130, W, 740);                     // photo area
+    if (photo) {
+      const box = { w: W, h: 740 }, k = Math.max(box.w / photo.width, box.h / photo.height);
+      const sw = box.w / k, sh = box.h / k, sy = Math.max(0, (photo.height - sh) * 0.15); // keep faces in frame
+      g.drawImage(photo, (photo.width - sw) / 2, sy, sw, sh, 0, 130, box.w, box.h);
+    } else {
+      g.fillStyle = '#9a8570'; g.font = `400 44px ${F}`; g.fillText('Photo not available', W / 2, 500);
+    }
+
+    g.textAlign = 'left'; g.fillStyle = '#1a100a'; g.font = `500 76px ${F}`;
+    g.fillText(fitText(g, p['Name'], W - 120), 60, 950);
+    const age = getAge(p['Date Of Birth']);
+    g.fillStyle = '#6b5440'; g.font = `400 42px ${F}`;
+    g.fillText(`${p['Filling the Form Of'] || ''}${age !== '—' ? ' · ' + age : ''}`, 60, 1020);
+
+    let y = 1090;
+    statusFields.slice(0, 7).forEach(k => {
+      const v = k === 'Date Of Birth' ? formatDOB(p[k]) : p[k];
+      if (!v || v === '—') return;
+      g.strokeStyle = '#e4d6c3'; g.lineWidth = 2; g.beginPath(); g.moveTo(60, y); g.lineTo(W - 60, y); g.stroke();
+      g.fillStyle = '#6b5440'; g.font = `400 36px ${F}`; g.textAlign = 'left'; g.fillText(fieldLabel(k), 60, y + 48);
+      g.fillStyle = '#1a100a'; g.font = `500 40px ${F}`; g.textAlign = 'right';
+      g.fillText(fitText(g, v, 560), W - 60, y + 48);
+      y += 96;
+    });
+
+    g.fillStyle = '#f7f0e8'; g.fillRect(0, 1800, W, 120);                    // footer
+    g.fillStyle = '#6b5440'; g.font = `400 34px ${F}`; g.textAlign = 'center';
+    g.fillText(`Profile ID ${uid}`, W / 2, 1840);
+    g.fillText('Message us on WhatsApp to connect', W / 2, 1884);
+
+    const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+    showStatusPreview(blob, `profile-${uid}.png`);
+  } catch (e) {
+    alert('Could not make the image: ' + (e.message || 'try again'));
+  }
+  btn.disabled = false; btn.textContent = label;
+}
+
+function showStatusPreview(blob, name) {
+  closeStatusPreview();
+  const url = URL.createObjectURL(blob);
+  const file = new File([blob], name, { type: 'image/png' });
+  const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+  const el = document.createElement('div');
+  el.id = 'status-preview'; el.className = 'status-preview';
+  el.innerHTML = `<div class="sp-box"><img src="${url}" alt="Status image preview">
+    <div class="sp-actions">
+      ${canShare ? '<button class="a-btn a-primary" id="sp-share">Share</button>' : ''}
+      <a class="a-btn" href="${url}" download="${escHtml(name)}">Save image</a>
+      <button class="a-btn" onclick="closeStatusPreview()">Close</button>
+    </div></div>`;
+  document.body.appendChild(el);
+  const sb = document.getElementById('sp-share');
+  if (sb) sb.onclick = async () => {
+    try { await navigator.share({ files: [file] }); } catch (e) { /* cancelled */ }
+  };
+}
+const closeStatusPreview = () => document.getElementById('status-preview')?.remove();
