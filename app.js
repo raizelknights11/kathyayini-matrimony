@@ -366,13 +366,16 @@ async function openModal(uid) {
         <div class="md-val">${k === 'Date Of Birth' ? formatDOB(v) : v}</div>
       </div>`;
   const used = new Set();
+  let firstOpen = true;
   const secHtml = Object.entries(DETAIL_SECTIONS).map(([title, keys]) => {
     if (title === 'Admin' && effectiveRole !== 'admin') { keys.forEach(k => used.add(k)); return ''; }
     const rows = keys.filter(k => k in p && visible(k, p[k])).map(k => { used.add(k); return rowHtml(k, p[k]); }).join('');
-    return rows ? `<div class="md-sec"><div class="md-sec-title">${title}</div><div class="md-grid">${rows}</div></div>` : '';
+    if (!rows) return '';
+    const open = firstOpen ? ' open' : ''; firstOpen = false;
+    return `<details class="md-sec"${open}><summary class="md-sec-title">${title}</summary><div class="md-grid">${rows}</div></details>`;
   }).join('');
   const rest = Object.entries(p).filter(([k, v]) => !used.has(k) && visible(k, v)).map(([k, v]) => rowHtml(k, v)).join('');
-  const detailSections = secHtml + (rest ? `<div class="md-sec"><div class="md-sec-title">Other</div><div class="md-grid">${rest}</div></div>` : '');
+  const detailSections = secHtml + (rest ? `<details class="md-sec"><summary class="md-sec-title">Other</summary><div class="md-grid">${rest}</div></details>` : '');
 
   const photo1 = driveThumbUrl(p['Photo 1 - of Bride or Groom'], 'w600');
   const photo2 = driveThumbUrl(p['Photo 2 - of Bride or Groom'], 'w600');
@@ -465,8 +468,10 @@ async function openModal(uid) {
   }
 
   if (currentRole === 'admin') {
-    document.getElementById('modal-body').insertAdjacentHTML('beforeend',
-      `<div class="a-danger"><button class="a-btn a-primary" onclick="shareStatus('${uid}', this)">Share to Status</button> <button class="a-btn" onclick="openEdit('${uid}')">✎ Edit profile</button> <button class="a-btn a-danger-btn" onclick="deleteProfile('${uid}')">🗑 Delete profile</button></div>`);
+    document.getElementById('modal-body').insertAdjacentHTML('afterbegin',
+      `<div class="a-toolbar"><button class="a-btn a-primary" onclick="shareStatus('${uid}', this)">Share to Status</button>
+        <button class="a-btn" onclick="openEdit('${uid}')">✎ Edit</button>
+        <button class="a-btn a-danger-btn" onclick="deleteProfile('${uid}')">🗑 Delete</button></div>`);
   }
 
   // Update prev/next nav button states based on position in filtered list
@@ -592,7 +597,6 @@ function applyFilters() {
 
 function renderGrid() {
   const grid = document.getElementById('grid');
-  document.getElementById('results-count').textContent = filtered.length;
 
   if (filtered.length === 0) {
     grid.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><div>No profiles match your filters</div></div>`;
@@ -797,6 +801,7 @@ function showLoginScreen(notice) {
             <button class="login-link" onclick="backToEmail()">Use a different email</button>
           </div>
         </div>
+        <div class="login-foot">New here? <a href="${REGISTER_URL}" target="_blank" rel="noopener noreferrer">Register your profile</a></div>
       </div>`;
     document.body.appendChild(el);
 
@@ -1197,32 +1202,34 @@ function showView(v) {
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.view === v));
   const onProfiles = v === 'profiles';
   ['controls-bar', 'grid'].forEach(id => document.getElementById(id).style.display = onProfiles ? '' : 'none');
-  document.querySelector('.results-bar').style.display = onProfiles ? '' : 'none';
   document.getElementById('admin-view').style.display = onProfiles ? 'none' : 'block';
   window.scrollTo(0, 0);
   if (onProfiles) return;
-  if (v === 'settings') { renderAdminView(); return; }
+  document.getElementById('admin-view').classList.toggle('wide', v === 'compare');
+  if (v === 'settings' || v === 'compare') { renderAdminView(); if (v === 'compare') cmpInit(); return; }
   if (_admin) renderAdminView();                              // instant, from memory
   if (!_admin || Date.now() - _adminAt > 20000) loadAdminData(); // refresh quietly
 }
 
 async function loadAdminData() {
   const box = document.getElementById('admin-view');
-  if (!_admin && _adminView !== 'profiles') box.innerHTML = '<div class="a-empty">Loading…</div>';
+  const onData = _adminView === 'interests' || _adminView === 'payments';
+  if (!_admin && onData) box.innerHTML = '<div class="a-empty">Loading…</div>';
   try {
     const res = await api('adminData', { token: sessionToken });
     if (!res.ok) throw new Error(res.error);
     _admin = res; _adminAt = Date.now();
-    if (_adminView !== 'profiles') renderAdminView();
+    if (onData && (_adminView === 'interests' || _adminView === 'payments')) renderAdminView();
   } catch (e) {
-    if (!_admin) box.innerHTML = '<div class="a-empty">Could not load. Check your connection and try again.</div>';
+    if (!_admin && onData) box.innerHTML = '<div class="a-empty">Could not load. Check your connection and try again.</div>';
   }
 }
 
 function renderAdminView() {
   const box = document.getElementById('admin-view');
   box.innerHTML = _adminView === 'interests' ? renderInterests()
-                : _adminView === 'settings'  ? renderSettings() : renderPayments();
+                : _adminView === 'settings'  ? renderSettings()
+                : _adminView === 'compare'   ? renderCompare() : renderPayments();
 }
 
 function renderInterests() {
@@ -1327,6 +1334,7 @@ async function deleteProfile(uid) {
     allProfiles = allProfiles.filter(x => x['Unique ID'] !== uid);
     closeModal();
     applyFilters();
+    updateCounts();
     if (_admin) loadAdminData();
     alert('Profile deleted. A copy is kept in the "Deleted Profiles" tab of your sheet.');
   } catch (e) {
@@ -1366,9 +1374,14 @@ function renderSettings() {
       <div class="sa-body"><div class="set-grid">${list(cls, chosen)}</div>
         <div class="a-actions"><button class="a-btn a-primary" onclick="${fn}(this)">Save</button></div></div>
     </details>`;
-  return `<h2 class="a-title">Settings</h2><div class="a-sub">Name, age, date of birth, gothra and height always show. Choose the rest.</div>` +
+  return `<h2 class="a-title">Settings</h2>
+    <div class="set-group">For users<small>Changes what every user sees</small></div>` +
     row('Profile cards', 'Details beside the photo, up to 12', 'set-card', cardFields, 'saveCardFields') +
-    row('WhatsApp Status image', 'Details on the shared image, up to 12', 'set-status', statusFields, 'saveStatusFields');
+    `<div class="set-group admin">Admin only<small>Only you can see these</small></div>` +
+    row('WhatsApp Status image', 'Details on the shared image, up to 12', 'set-status', statusFields, 'saveStatusFields') +
+    `<details class="set-acc" ontoggle="if (this.open) loadDeleted()">
+      <summary><span class="sa-t">Deleted profiles</span><span class="sa-d">Restore a profile deleted by mistake</span></summary>
+      <div class="sa-body" id="deleted-box"></div></details>`;
 }
 
 async function saveCardFields(btn) {
@@ -1440,6 +1453,9 @@ function openEdit(uid) {
     <button class="a-btn" onclick="closeEdit()">✕</button></div><div class="ed-body">${secs}</div>
     <div class="ed-foot"><button class="a-btn a-primary" onclick="saveEdit('${escHtml(uid)}',this)">Save changes</button></div></div>`;
   document.body.appendChild(el);
+  el.querySelectorAll('.ed-sec').forEach(d => d.addEventListener('toggle', () => {
+    if (d.open) el.querySelectorAll('.ed-sec').forEach(o => { if (o !== d) o.open = false; });
+  }));
 }
 const closeEdit = () => document.getElementById('edit-panel')?.remove();
 
@@ -1615,9 +1631,9 @@ async function renderStatus(uid, which) {
   showStatusPreview(blob, `profile-${uid}.png`, note, uid, which, !!p['Photo 2 - of Bride or Groom']);
 }
 
-async function shareStatus(uid, btn) {
+async function makeStatus(uid, which, btn) {
   const label = btn.textContent; btn.disabled = true; btn.textContent = 'Preparing…';
-  try { await renderStatus(uid, 1); } catch (e) { alert('Could not make the image: ' + (e.message || 'try again')); }
+  try { await renderStatus(uid, which); } catch (e) { closeStatusPreview(); alert('Could not make the image: ' + (e.message || 'try again')); }
   btn.disabled = false; btn.textContent = label;
 }
 
@@ -1666,3 +1682,122 @@ const DETAIL_SECTIONS = {
     "If you have selected 'Other Country', please mention the place", 'Address', 'Phone Number', 'Email Address'],
   'Admin': ['Payment Status', 'Paid Until', 'Status', 'Admin Notes'],
 };
+
+
+function shareStatus(uid, btn) {
+  const p = allProfiles.find(x => x['Unique ID'] === uid);
+  const t1 = driveThumbUrl(p['Photo 1 - of Bride or Groom'], 'w200'), t2 = driveThumbUrl(p['Photo 2 - of Bride or Groom'], 'w200');
+  if (!t1 || !t2) { makeStatus(uid, t1 ? 1 : (t2 ? 2 : 1), btn); return; }   // only one photo: no choice needed
+  closeStatusPreview();
+  const el = document.createElement('div');
+  el.id = 'status-preview'; el.className = 'status-preview';
+  el.innerHTML = `<div class="sp-box"><strong class="sp-title">Which photo for the Status image?</strong>
+    <div class="sp-tabs">
+      <button class="sp-pick" onclick="pickStatusPhoto('${escHtml(uid)}', 1)"><img src="${t1}" alt="Photo 1">Photo 1</button>
+      <button class="sp-pick" onclick="pickStatusPhoto('${escHtml(uid)}', 2)"><img src="${t2}" alt="Photo 2">Photo 2</button>
+    </div><button class="a-btn" onclick="closeStatusPreview()">Cancel</button></div>`;
+  document.body.appendChild(el);
+}
+
+async function pickStatusPhoto(uid, n) {
+  document.querySelector('#status-preview .sp-box').innerHTML = '<strong class="sp-title">Preparing the image…</strong>';
+  try { await renderStatus(uid, n); } catch (e) { closeStatusPreview(); alert('Could not make the image: ' + (e.message || 'try again')); }
+}
+
+// =====================================================================
+// ADMIN: COMPARE — brides on the left, grooms on the right
+// =====================================================================
+const CMP_ROWS = [['Date Of Birth', 'Date Of Birth'], ['Nakshatra', 'Nakshatra'], ['Rashi', 'Rashi'], ['Gothra', 'Gothra'],
+  ['Sub Caste', 'Sub Caste'], ['Height', STATIC_KEYS[2]], ['Education', 'Education'], ['Work Field', 'Work Field'],
+  ['Company & Role', 'Currently Working-In(Company Name) and As(Position)'], ['Marital Status', 'Marital Status'],
+  ['Location', 'Staying In'], ['Age gap wanted', 'Age Gap']];
+let _cmp = { Bride: null, Groom: null };
+
+function renderCompare() {
+  const uniq = (type, k) => [...new Set(allProfiles.filter(p => p['Filling the Form Of'] === type).map(p => p[k]).filter(Boolean))].sort();
+  const col = (type, title) => `<div class="cmp-col"><div class="cmp-h ${type.toLowerCase()}">${title}</div>
+    <input class="filter-btn" id="cmp-q-${type}" placeholder="Search name, gothra, star…" oninput="cmpList('${type}')">
+    <select class="filter-btn" id="cmp-c-${type}" onchange="cmpList('${type}')"><option value="">All sub-castes</option>${uniq(type, 'Sub Caste').map(v => `<option>${escHtml(v)}</option>`).join('')}</select>
+    <select class="filter-btn" id="cmp-l-${type}" onchange="cmpList('${type}')"><option value="">All locations</option>${uniq(type, 'Staying In').map(v => `<option>${escHtml(v)}</option>`).join('')}</select>
+    <div class="cmp-list" id="cmp-list-${type}"></div></div>`;
+  return `<h2 class="a-title">Compare</h2><div class="cmp-cols">${col('Bride', 'Brides')}${col('Groom', 'Grooms')}</div><div id="cmp-result"></div>`;
+}
+
+function cmpInit() { _cmp = { Bride: null, Groom: null }; cmpList('Bride'); cmpList('Groom'); }
+
+function cmpList(type) {
+  const q = document.getElementById('cmp-q-' + type).value.trim().toLowerCase();
+  const c = document.getElementById('cmp-c-' + type).value, l = document.getElementById('cmp-l-' + type).value;
+  const list = allProfiles.filter(p => p['Filling the Form Of'] === type && (!c || p['Sub Caste'] === c) && (!l || p['Staying In'] === l) &&
+    (!q || [p['Name'], p['Gothra'], p['Nakshatra'], p['Unique ID']].join(' ').toLowerCase().includes(q)));
+  document.getElementById('cmp-list-' + type).innerHTML = list.map(p => {
+    const age = getAge(p['Date Of Birth']);
+    return `<button class="cmp-item${_cmp[type] === p['Unique ID'] ? ' sel' : ''}" onclick="cmpPick('${type}','${escHtml(p['Unique ID'])}')">
+      <strong>${escHtml(p['Name'])}</strong><small>${age !== '—' ? age + ' · ' : ''}${escHtml(p['Gothra'] || '')} · ${escHtml(p['Nakshatra'] || '')}</small></button>`;
+  }).join('') || '<div class="a-empty">No profiles</div>';
+}
+
+function cmpPick(type, uid) {
+  _cmp[type] = _cmp[type] === uid ? null : uid;
+  cmpList(type);
+  const b = allProfiles.find(p => p['Unique ID'] === _cmp.Bride), g = allProfiles.find(p => p['Unique ID'] === _cmp.Groom);
+  const box = document.getElementById('cmp-result');
+  if (!b || !g) { box.innerHTML = ''; return; }
+  const val = (p, label, k) => label === 'Date Of Birth' ? formatDOB(p[k]) : (p[k] || '—');
+  const rows = CMP_ROWS.map(([label, k]) => {
+    const vb = val(b, label, k), vg = val(g, label, k);
+    const same = vb !== '—' && vb.toLowerCase() === vg.toLowerCase();
+    return `<tr${same && label === 'Gothra' ? ' class="warn"' : ''}><th>${label}</th><td>${escHtml(vb)}</td><td>${escHtml(vg)}</td></tr>`;
+  }).join('');
+  const ab = getAge(b['Date Of Birth']), ag = getAge(g['Date Of Birth']);
+  const gap = ab !== '—' && ag !== '—' ? parseInt(ag, 10) - parseInt(ab, 10) : null;
+  const notes = [];
+  if ((b['Gothra'] || '').toLowerCase() && (b['Gothra'] || '').toLowerCase() === (g['Gothra'] || '').toLowerCase()) notes.push('Same gothra');
+  if (gap !== null) notes.push(gap === 0 ? 'Same age' : `Groom is ${Math.abs(gap)} year${Math.abs(gap) > 1 ? 's' : ''} ${gap > 0 ? 'older' : 'younger'}`);
+  box.innerHTML = `<div class="a-card"><table class="cmp-table"><tr><th></th><th class="bride">${escHtml(b['Name'])}<small>${ab !== '—' ? ab : ''}</small></th>
+    <th class="groom">${escHtml(g['Name'])}<small>${ag !== '—' ? ag : ''}</small></th></tr>${rows}</table>
+    ${notes.length ? `<div class="cmp-notes">${notes.map(n => `<span class="${n === 'Same gothra' ? 'bad' : ''}">${n}</span>`).join('')}</div>` : ''}
+    <div class="a-actions"><button class="a-btn" onclick="openModal('${escHtml(b['Unique ID'])}')">Open bride</button>
+      <button class="a-btn" onclick="openModal('${escHtml(g['Unique ID'])}')">Open groom</button></div></div>`;
+}
+
+
+function updateCounts() {
+  const n = t => allProfiles.filter(p => p['Filling the Form Of'] === t).length;
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('bride-count', n('Bride')); set('groom-count', n('Groom')); set('all-count', allProfiles.length);
+}
+
+// ---- Settings: deleted profiles (view + restore) ----
+async function loadDeleted() {
+  const box = document.getElementById('deleted-box');
+  if (!box) return;
+  box.innerHTML = '<div class="a-empty">Loading…</div>';
+  try {
+    const r = await api('deletedList', { token: sessionToken });
+    if (!r.ok) throw new Error(r.error);
+    box.innerHTML = r.items.length ? r.items.map(i => `
+      <div class="a-card">
+        <div class="a-row"><strong>${escHtml(i.name)}</strong><span class="a-date">${escHtml(i.deletedOn)}</span></div>
+        <div class="a-sub">${escHtml(i.type)} · ${escHtml(i.uid)} · deleted by ${escHtml(i.deletedBy)}</div>
+        <div class="a-actions"><button class="a-btn a-primary" onclick="restoreDeleted(${i.row}, '${escHtml(i.uid)}', this)">Restore</button></div>
+      </div>`).join('') : '<div class="a-empty">No deleted profiles.</div>';
+  } catch (e) {
+    box.innerHTML = `<div class="a-empty">Could not load: ${escHtml(e.message || 'try again')}</div>`;
+  }
+}
+
+async function restoreDeleted(row, uid, btn) {
+  if (!confirm(`Restore ${uid}? It will appear in the profiles list again.`)) return;
+  btn.disabled = true; btn.textContent = 'Restoring…';
+  try {
+    const r = await api('restoreProfile', { token: sessionToken, row, uid });
+    if (!r.ok) throw new Error(r.error);
+    await loadDeleted();
+    await loadData();            // bring the restored profile back into the list and the counts
+    showView('settings');
+  } catch (e) {
+    alert('Could not restore: ' + (e.message || 'try again'));
+    btn.disabled = false; btn.textContent = 'Restore';
+  }
+}
