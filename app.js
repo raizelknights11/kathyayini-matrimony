@@ -205,6 +205,7 @@ function getOrCreateCard(p) {
   el.className = `profile-card ${type}`;
   el.id = cardId;
   el.innerHTML = `
+    ${topHtml(p)}
     <div class="card-images">
       <div class="image-slider" id="${cardId}-slider">
         <div class="image-slide active img-loading" data-idx="0">
@@ -357,17 +358,21 @@ async function openModal(uid) {
 
   const effectiveRole = (_previewGuest && currentRole === 'admin') ? 'guest' : currentRole;
 
-  const detailRows = Object.entries(p)
-    .filter(([k, v]) => {
-      if (!v || !v.trim() || skip.has(k)) return false;
-      if (effectiveRole !== 'admin' && HIDDEN_FOR_GUEST.includes(k)) return false;
-      return true;
-    })
-    .map(([k, v]) => `
-      <div class="md-row">
+  const visible = (k, v) => v && String(v).trim() && !skip.has(k) &&
+    (effectiveRole === 'admin' || !HIDDEN_FOR_GUEST.includes(k));
+  const rowHtml = (k, v) => `
+      <div class="md-row${String(v).length > 38 ? ' wide' : ''}">
         <div class="md-key">${k.replace(/\s+/g, ' ').trim()}</div>
         <div class="md-val">${k === 'Date Of Birth' ? formatDOB(v) : v}</div>
-      </div>`).join('');
+      </div>`;
+  const used = new Set();
+  const secHtml = Object.entries(DETAIL_SECTIONS).map(([title, keys]) => {
+    if (title === 'Admin' && effectiveRole !== 'admin') { keys.forEach(k => used.add(k)); return ''; }
+    const rows = keys.filter(k => k in p && visible(k, p[k])).map(k => { used.add(k); return rowHtml(k, p[k]); }).join('');
+    return rows ? `<div class="md-sec"><div class="md-sec-title">${title}</div><div class="md-grid">${rows}</div></div>` : '';
+  }).join('');
+  const rest = Object.entries(p).filter(([k, v]) => !used.has(k) && visible(k, v)).map(([k, v]) => rowHtml(k, v)).join('');
+  const detailSections = secHtml + (rest ? `<div class="md-sec"><div class="md-sec-title">Other</div><div class="md-grid">${rest}</div></div>` : '');
 
   const photo1 = driveThumbUrl(p['Photo 1 - of Bride or Groom'], 'w600');
   const photo2 = driveThumbUrl(p['Photo 2 - of Bride or Groom'], 'w600');
@@ -395,7 +400,7 @@ async function openModal(uid) {
         <div class="md-left" id="md-photos"></div>
         <div class="md-resize-handle" id="md-resize-handle" title="Drag to resize"></div>
         <div class="md-right">
-          <div class="md-grid">${detailRows}</div>
+          ${detailSections}
           <div class="md-horo-row">${horoBtn}</div>
         </div>
       </div>
@@ -1335,10 +1340,11 @@ async function deleteProfile(uid) {
 // =====================================================================
 const LABELS = { 'Staying In': 'Location', 'ಮಠ - Mata': 'Mata',
   'Currently Working-In(Company Name) and As(Position)': 'Company & Role', 'Salary(LPA)': 'Salary (LPA)' };
+const STATIC_KEYS = ['Date Of Birth', 'Gothra', 'Height (in feet) - example 5 / 5`2 / 5`11']; // always shown, never chosen
 const fieldLabel = k => LABELS[k] || k.replace(/\(.*?\)/g, '').split(' - ')[0].replace(/^\*+\s*/, '').trim();
 
 function staticHtml(p) {
-  const rows = cardFields.map(k => {
+  const rows = cardFields.filter(k => STATIC_KEYS.indexOf(k) === -1).map(k => {
     const v = k === 'Date Of Birth' ? formatDOB(p[k]) : p[k];
     return v && v !== '—' ? `<div class="cs-row"><span>${escHtml(fieldLabel(k))}</span>${escHtml(v)}</div>` : '';
   }).join('');
@@ -1347,7 +1353,7 @@ function staticHtml(p) {
 
 const NOT_SELECTABLE = ['Unique ID', 'Timestamp', 'Name', 'Photo 1 - of Bride or Groom', 'Photo 2 - of Bride or Groom',
   'Horoscope', 'Payment Status', 'Paid Until', 'Status', 'Admin Notes', 'Email Address', 'Phone Number', 'Address',
-  "Father's Phone Number", "Mother's Phone Number"];
+  "Father's Phone Number", "Mother's Phone Number", ...STATIC_KEYS];
 
 function renderSettings() {
   const keys = []; allProfiles.forEach(p => Object.keys(p).forEach(k => {
@@ -1357,12 +1363,12 @@ function renderSettings() {
   const row = (title, desc, cls, chosen, fn) => `
     <details class="set-acc">
       <summary><span class="sa-t">${title}</span><span class="sa-d">${desc}</span><span class="sa-n">${chosen.length} selected</span></summary>
-      <div class="sa-body">${list(cls, chosen)}
+      <div class="sa-body"><div class="set-grid">${list(cls, chosen)}</div>
         <div class="a-actions"><button class="a-btn a-primary" onclick="${fn}(this)">Save</button></div></div>
     </details>`;
-  return `<h2 class="a-title">Settings</h2>` +
-    row('Profile cards', 'Details on each phone card, up to 12', 'set-card', cardFields, 'saveCardFields') +
-    row('WhatsApp Status image', 'Details on the shared image, up to 7', 'set-status', statusFields, 'saveStatusFields');
+  return `<h2 class="a-title">Settings</h2><div class="a-sub">Name, age, date of birth, gothra and height always show. Choose the rest.</div>` +
+    row('Profile cards', 'Details beside the photo, up to 12', 'set-card', cardFields, 'saveCardFields') +
+    row('WhatsApp Status image', 'Details on the shared image, up to 12', 'set-status', statusFields, 'saveStatusFields');
 }
 
 async function saveCardFields(btn) {
@@ -1381,7 +1387,7 @@ async function saveCardFields(btn) {
 
 async function saveStatusFields(btn) {
   const fields = [...document.querySelectorAll('.set-status:checked')].map(i => i.value);
-  if (fields.length > 7) { alert('Choose up to 7 fields for the Status image.'); return; }
+  if (fields.length > 12) { alert('Choose up to 12 fields for the Status image.'); return; }
   btn.disabled = true; btn.textContent = 'Saving…';
   try {
     const r = await api('saveSettings', { token: sessionToken, fields, which: 'status' });
@@ -1509,75 +1515,123 @@ function loadImg(src) {
   return new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 }
 
-async function shareStatus(uid, btn) {
-  const p = allProfiles.find(x => x['Unique ID'] === uid);
-  if (!p) return;
-  const label = btn.textContent; btn.disabled = true; btn.textContent = 'Preparing…';
-  try {
-    let photo = null, note = '';
-    try {
-      const r = await api('photoData', { token: sessionToken, uid });
-      if (r.ok && r.photo) { photo = await loadImg(r.photo); if (!photo) note = 'The photo could not be drawn.'; }
-      else note = r.reason || r.error || 'The photo could not be loaded.';
-    } catch (e) { note = e.message || 'The photo could not be loaded.'; }
-    try { await document.fonts.load('500 40px "DM Sans"'); } catch (e) {}
-
-    const W = 1080, H = 1920, F = '"DM Sans", "Noto Sans Kannada", sans-serif';
-    const c = document.createElement('canvas'); c.width = W; c.height = H;
-    const g = c.getContext('2d');
-    g.fillStyle = '#fffaf4'; g.fillRect(0, 0, W, H);
-
-    g.fillStyle = '#7a5218'; g.fillRect(0, 0, W, 130);                       // header bar
-    g.fillStyle = '#fff'; g.font = `500 56px ${F}`; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText('Kathyayini Matrimony', W / 2, 66);
-
-    g.fillStyle = '#ede4d8'; g.fillRect(0, 130, W, 740);                     // photo area
-    if (photo) {
-      const box = { w: W, h: 740 }, k = Math.max(box.w / photo.width, box.h / photo.height);
-      const sw = box.w / k, sh = box.h / k, sy = Math.max(0, (photo.height - sh) * 0.15); // keep faces in frame
-      g.drawImage(photo, (photo.width - sw) / 2, sy, sw, sh, 0, 130, box.w, box.h);
-    } else {
-      g.fillStyle = '#9a8570'; g.font = `400 44px ${F}`; g.fillText('Photo not available', W / 2, 500);
+function wrapText(g, text, maxW) {
+  const lines = []; let cur = '';
+  String(text).split(/\s+/).forEach(w => {
+    const t = cur ? cur + ' ' + w : w;
+    if (g.measureText(t).width <= maxW) { cur = t; return; }
+    if (cur) lines.push(cur);
+    while (g.measureText(w).width > maxW && w.length > 1) {
+      let i = w.length; while (i > 1 && g.measureText(w.slice(0, i)).width > maxW) i--;
+      lines.push(w.slice(0, i)); w = w.slice(i);
     }
+    cur = w;
+  });
+  if (cur) lines.push(cur);
+  return lines;
+}
 
-    g.textAlign = 'left'; g.fillStyle = '#1a100a'; g.font = `500 76px ${F}`;
-    g.fillText(fitText(g, p['Name'], W - 120), 60, 950);
-    const age = getAge(p['Date Of Birth']);
-    g.fillStyle = '#6b5440'; g.font = `400 42px ${F}`;
-    g.fillText(`${p['Filling the Form Of'] || ''}${age !== '—' ? ' · ' + age : ''}`, 60, 1020);
+function drawStatus(p, uid, photo) {
+  const W = 1080, H = 1920, F = '"DM Sans", "Noto Sans Kannada", sans-serif';
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  g.fillStyle = '#fffaf4'; g.fillRect(0, 0, W, H);
 
-    let y = 1090;
-    statusFields.slice(0, 7).forEach(k => {
-      const v = k === 'Date Of Birth' ? formatDOB(p[k]) : p[k];
-      if (!v || v === '—') return;
-      g.strokeStyle = '#e4d6c3'; g.lineWidth = 2; g.beginPath(); g.moveTo(60, y); g.lineTo(W - 60, y); g.stroke();
-      g.fillStyle = '#6b5440'; g.font = `400 36px ${F}`; g.textAlign = 'left'; g.fillText(fieldLabel(k), 60, y + 48);
-      g.fillStyle = '#1a100a'; g.font = `500 40px ${F}`; g.textAlign = 'right';
-      g.fillText(fitText(g, v, 560), W - 60, y + 48);
-      y += 96;
+  // chosen fields: long values wrap onto more lines; rows shrink a little if many are chosen
+  const fields = statusFields.filter(k => STATIC_KEYS.indexOf(k) === -1)
+    .map(k => ({ k, v: p[k] })).filter(f => f.v && f.v !== '—');
+  const TOP = 130, NAME_H = 175, FOOT = 120, GAP = 20, VALW = 600;
+  let rows = [], total = 0, sc = 1;
+  for (const s of [1, 0.9, 0.8, 0.7]) {
+    sc = s; g.font = `500 ${Math.round(40 * s)}px ${F}`;
+    rows = fields.map(f => {
+      const lines = wrapText(g, f.v, VALW), lh = Math.round(48 * s);
+      return { f, lines, lh, h: Math.max(Math.round(92 * s), lines.length * lh + Math.round(44 * s)) };
     });
-
-    g.fillStyle = '#f7f0e8'; g.fillRect(0, 1800, W, 120);                    // footer
-    g.fillStyle = '#6b5440'; g.font = `400 34px ${F}`; g.textAlign = 'center';
-    g.fillText(`Profile ID ${uid}`, W / 2, 1840);
-    g.fillText('Message us on WhatsApp to connect', W / 2, 1884);
-
-    const blob = await new Promise(r => c.toBlob(r, 'image/png'));
-    showStatusPreview(blob, `profile-${uid}.png`, note);
-  } catch (e) {
-    alert('Could not make the image: ' + (e.message || 'try again'));
+    total = rows.reduce((a, r) => a + r.h, 0);
+    if (H - TOP - NAME_H - FOOT - GAP - total >= 560) break;
   }
+  const photoH = Math.max(420, H - TOP - NAME_H - FOOT - GAP - total);
+
+  g.fillStyle = '#7a5218'; g.fillRect(0, 0, W, TOP);                         // header
+  g.fillStyle = '#fff'; g.font = `500 56px ${F}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('Kathyayini Matrimony', W / 2, 66);
+
+  g.fillStyle = '#ede4d8'; g.fillRect(0, TOP, W, photoH);                    // photo
+  if (photo) {
+    const k = Math.max(W / photo.width, photoH / photo.height), sw = W / k, sh = photoH / k;
+    g.drawImage(photo, (photo.width - sw) / 2, Math.max(0, (photo.height - sh) * 0.15), sw, sh, 0, TOP, W, photoH);
+  } else {
+    g.fillStyle = '#9a8570'; g.font = `400 44px ${F}`; g.fillText('Photo not available', W / 2, TOP + photoH / 2);
+  }
+
+  let y = TOP + photoH;                                                      // name · age · DOB · gothra · height
+  const age = getAge(p['Date Of Birth']);
+  g.textAlign = 'right'; g.fillStyle = '#6b5440'; g.font = `500 44px ${F}`;
+  const ageText = age !== '—' ? String(age) : '';
+  if (ageText) g.fillText(ageText, W - 60, y + 50);
+  const ageW = ageText ? g.measureText(ageText).width + 30 : 0;
+  g.textAlign = 'left'; g.fillStyle = '#1a100a'; g.font = `700 60px ${F}`;
+  g.fillText(fitText(g, p['Name'], W - 120 - ageW), 60, y + 50);
+  const meta = [formatDOB(p['Date Of Birth']), p['Gothra'], p[STATIC_KEYS[2]]].filter(v => v && v !== '—').join('   ·   ');
+  g.fillStyle = '#6b5440'; g.font = `500 38px ${F}`;
+  g.fillText(fitText(g, meta, W - 120), 60, y + 120);
+  y += NAME_H;
+
+  rows.forEach(r => {                                                        // chosen fields
+    g.strokeStyle = '#e4d6c3'; g.lineWidth = 2; g.beginPath(); g.moveTo(60, y); g.lineTo(W - 60, y); g.stroke();
+    const first = y + Math.round(46 * sc);
+    g.textAlign = 'left'; g.fillStyle = '#6b5440'; g.font = `400 ${Math.round(36 * sc)}px ${F}`;
+    g.fillText(fieldLabel(r.f.k), 60, first);
+    g.textAlign = 'right'; g.fillStyle = '#1a100a'; g.font = `500 ${Math.round(40 * sc)}px ${F}`;
+    r.lines.forEach((ln, i) => g.fillText(ln, W - 60, first + i * r.lh));
+    y += r.h;
+  });
+
+  g.fillStyle = '#f7f0e8'; g.fillRect(0, H - FOOT, W, FOOT);                 // footer
+  g.fillStyle = '#6b5440'; g.font = `400 34px ${F}`; g.textAlign = 'center';
+  g.fillText(`Profile ID ${uid}`, W / 2, H - FOOT + 40);
+  g.fillText('Message us on WhatsApp to connect', W / 2, H - FOOT + 84);
+  return c;
+}
+
+const _photoCache = {};
+
+async function renderStatus(uid, which) {
+  const p = allProfiles.find(x => x['Unique ID'] === uid);
+  const key = uid + ':' + which;
+  if (!(key in _photoCache)) {
+    try {
+      const r = await api('photoData', { token: sessionToken, uid, which });
+      _photoCache[key] = r.ok && r.photo ? { src: r.photo } : { reason: r.reason || r.error || 'The photo could not be loaded.' };
+    } catch (e) { _photoCache[key] = { reason: e.message || 'The photo could not be loaded.' }; }
+  }
+  let photo = null, note = _photoCache[key].reason || '';
+  if (_photoCache[key].src) { photo = await loadImg(_photoCache[key].src); if (!photo) note = 'The photo could not be drawn.'; }
+  try { await document.fonts.load('500 40px "DM Sans"'); } catch (e) {}
+  const c = drawStatus(p, uid, photo);
+  if (!c.getContext('2d')) throw new Error('This browser cannot draw the image.');
+  const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+  showStatusPreview(blob, `profile-${uid}.png`, note, uid, which, !!p['Photo 2 - of Bride or Groom']);
+}
+
+async function shareStatus(uid, btn) {
+  const label = btn.textContent; btn.disabled = true; btn.textContent = 'Preparing…';
+  try { await renderStatus(uid, 1); } catch (e) { alert('Could not make the image: ' + (e.message || 'try again')); }
   btn.disabled = false; btn.textContent = label;
 }
 
-function showStatusPreview(blob, name, note) {
+function showStatusPreview(blob, name, note, uid, which, hasSecond) {
   closeStatusPreview();
   const url = URL.createObjectURL(blob);
   const file = new File([blob], name, { type: 'image/png' });
   const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
   const el = document.createElement('div');
   el.id = 'status-preview'; el.className = 'status-preview';
-  el.innerHTML = `<div class="sp-box"><img src="${url}" alt="Status image preview">
+  el.innerHTML = `<div class="sp-box">
+    ${hasSecond ? `<div class="sp-tabs"><button class="a-btn${which === 1 ? ' a-primary' : ''}" onclick="renderStatus('${escHtml(uid)}', 1)">Photo 1</button>
+      <button class="a-btn${which === 2 ? ' a-primary' : ''}" onclick="renderStatus('${escHtml(uid)}', 2)">Photo 2</button></div>` : ''}
+    <img src="${url}" alt="Status image preview">
     ${note ? `<div class="sp-note">Photo not added: ${escHtml(note)}</div>` : ''}
     <div class="sp-actions">
       ${canShare ? '<button class="a-btn a-primary" id="sp-share">Share</button>' : ''}
@@ -1586,8 +1640,29 @@ function showStatusPreview(blob, name, note) {
     </div></div>`;
   document.body.appendChild(el);
   const sb = document.getElementById('sp-share');
-  if (sb) sb.onclick = async () => {
-    try { await navigator.share({ files: [file] }); } catch (e) { /* cancelled */ }
-  };
+  if (sb) sb.onclick = async () => { try { await navigator.share({ files: [file] }); } catch (e) { /* cancelled */ } };
 }
 const closeStatusPreview = () => document.getElementById('status-preview')?.remove();
+
+function topHtml(p) {
+  const age = getAge(p['Date Of Birth']);
+  const meta = [formatDOB(p['Date Of Birth']), p['Gothra'], p[STATIC_KEYS[2]]]
+    .filter(v => v && v !== '—').map(escHtml).join(' · ');
+  return `<div class="card-top"><div class="ct-name">${escHtml(p['Name'])}${age !== '—' ? ` <span>${age}</span>` : ''}</div><div class="ct-meta">${meta}</div></div>`;
+}
+
+
+// Sections shown in Full Details (anything not listed falls under "Other")
+const DETAIL_SECTIONS = {
+  'Personal': ['Date Of Birth', 'Time Of Birth', 'Place of Birth', 'Marital Status', 'Nakshatra', 'Charana', 'Rashi',
+    'Gothra', 'Sub Caste', 'ಮಠ - Mata', 'Height (in feet) - example 5 / 5`2 / 5`11', 'Personal Habits'],
+  'Professional': ['Education', 'Mention your degrees', 'Work Field', 'Currently Working-In(Company Name) and As(Position)', 'Salary(LPA)'],
+  'Family': ["Father's Name", "Father's Occupation", "Father's Phone Number", "Father's Native", "Mother's Name",
+    "Mother's Occupation", "Mother's Phone Number", "Mother's Native", 'Siblings'],
+  'Preferences': ['Age Gap', 'Will agree on Same Gothra', 'Will agree on any Bhramins and Mata', 'Required Martial Status',
+    'Language Preference', 'Abroad Relocation', 'Local Relocation', 'Planning To Relocate',
+    "If you have selected 'To Other Country', please mention the place"],
+  'Location & Contact': ['Staying In', 'If currently not staying in Bengaluru Please mention the city',
+    "If you have selected 'Other Country', please mention the place", 'Address', 'Phone Number', 'Email Address'],
+  'Admin': ['Payment Status', 'Paid Until', 'Status', 'Admin Notes'],
+};
