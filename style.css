@@ -1416,3 +1416,62 @@ body.has-nav { padding-bottom: 76px; }
 /* ── Settings: two columns ────────────────────────────────────────── */
 .set-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; }
 .set-grid .set-row { font-size: 13px; line-height: 1.3; padding: 6px 0; min-width: 0; }
+
+/* ── Full Details: aligned, collapsible sections ──────────────────── */
+.md-sec { margin-bottom: 8px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--card); }
+.md-sec > summary.md-sec-title { list-style: none; display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; padding: 10px 12px; margin: 0; border: 0; background: rgba(160,114,42,.08); }
+.md-sec > summary.md-sec-title::-webkit-details-marker { display: none; }
+.md-sec > summary.md-sec-title::after { content: '›'; font-size: 18px; transition: transform .2s; }
+.md-sec[open] > summary.md-sec-title::after { transform: rotate(90deg); }
+.md-sec .md-grid { padding: 4px 12px 8px; gap: 0 20px !important; }
+.md-sec .md-row { border: 0 !important; border-bottom: 1px solid var(--border) !important; padding: 8px 0 !important; margin: 0 !important; }
+
+/* ── Edit panel: one section at a time, blue headings ─────────────── */
+.ed-sec { border-left: 3px solid #2f6f9f; padding-left: 10px; margin: 8px 0; }
+.ed-sec summary { color: #2f6f9f !important; font-size: 14px; }
+.ed-box { border-color: #2f6f9f !important; }
+
+/* ── Admin buttons at the top of the popup ────────────────────────── */
+.a-toolbar { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--card); }
+.a-toolbar .a-btn { min-height: 40px; }
+
+/* ── Photo picker before the Status image ─────────────────────────── */
+.sp-title { color: #fff; font-size: 15px; text-align: center; }
+.sp-pick { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px; background: var(--card);
+  border: 2px solid var(--border); border-radius: 12px; cursor: pointer; font: 13px 'DM Sans', sans-serif; color: var(--text); }
+.sp-pick img { width: 130px; height: 170px; object-fit: cover; border-radius: 8px; }
+.sp-pick:hover, .sp-pick:focus-visible { border-color: var(--gold); }
+
+/* ── Compare tab ──────────────────────────────────────────────────── */
+.admin-view.wide { max-width: 900px; }
+.cmp-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cmp-col { min-width: 0; }
+.cmp-h { font-weight: 700; padding: 6px 0; margin-bottom: 6px; border-bottom: 3px solid var(--border); }
+.cmp-h.bride { border-color: var(--bride-color); } .cmp-h.groom { border-color: var(--groom-color); }
+.cmp-col .filter-btn { width: 100%; margin-bottom: 6px; min-height: 40px; font-size: 13px; }
+.cmp-list { max-height: 44vh; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+.cmp-item { display: block; width: 100%; text-align: left; padding: 9px 10px; border: 0; border-bottom: 1px solid var(--border);
+  background: none; font: 13px 'DM Sans', sans-serif; color: var(--text); cursor: pointer; }
+.cmp-item small { display: block; color: var(--text-muted); font-size: 11.5px; margin-top: 2px; }
+.cmp-item.sel { background: rgba(160,114,42,.16); box-shadow: inset 3px 0 0 var(--gold); }
+#cmp-result { margin-top: 14px; }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+.cmp-table th, .cmp-table td { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.cmp-table th:first-child { width: 28%; color: var(--text-muted); font-weight: 500; }
+.cmp-table th small { display: block; font-weight: 400; color: var(--text-muted); }
+.cmp-table tr.warn td { background: rgba(163,45,45,.12); }
+.cmp-notes { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.cmp-notes span { padding: 4px 10px; border-radius: 999px; background: rgba(160,114,42,.15); font-size: 12px; }
+.cmp-notes span.bad { background: rgba(163,45,45,.2); color: var(--rose); font-weight: 600; }
+.nav-tab span { font-size: 18px; }
+
+/* ── Login: register link ─────────────────────────────────────────── */
+.login-foot { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border); text-align: center; font-size: 13px; color: var(--text-muted); }
+.login-foot a { color: var(--gold); font-weight: 600; }
+
+/* ── Settings groups ──────────────────────────────────────────────── */
+.set-group { display: flex; align-items: baseline; gap: 8px; margin: 18px 0 8px; font-size: 13px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--gold); }
+.set-group small { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-muted); font-size: 12px; }
+.set-group.admin { color: var(--rose); }
