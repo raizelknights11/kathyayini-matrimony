@@ -1513,3 +1513,11 @@ body.has-nav { padding-bottom: 76px; }
 .cmp-list { max-height: 22vh !important; }
 .cmp-filters .filter-btn, .cmp-search { font-size: 12.5px; }
 .cmp-filters .filter-btn { padding: 0 30px 0 8px !important; text-overflow: ellipsis; }
+
+/* ── Members: tabs, my profile, payment badge ─────────────────────── */
+.nav-tab[hidden] { display: none !important; }
+.mp-photos { display: flex; gap: 8px; margin: 10px 0; }
+.mp-photos img { width: calc(50% - 4px); aspect-ratio: 3 / 4; object-fit: cover; border-radius: 8px; background: var(--surface); }
+.pay-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.pay-badge.ok { background: rgba(60,120,70,.15); color: var(--sage); }
+.pay-badge.wait { background: rgba(163,45,45,.15); color: var(--rose); }
