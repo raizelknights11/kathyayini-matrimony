@@ -16,7 +16,6 @@ const HIDDEN_FOR_GUEST = [
   'Email Address',
   'First contact',
   'Second contact',
-  'Parents Phone Number',
 ];
 
 // =====================================================================
@@ -386,6 +385,15 @@ async function openModal(uid) {
     ? `<button class="horoscope-btn md-horo-btn" onclick="openHoroscopeLightbox('${horoUrl}','${uid}')">✦ View Horoscope</button>`
     : `<button class="horoscope-btn md-horo-btn" disabled style="opacity:0.4;cursor:not-allowed">✦ No Horoscope</button>`;
 
+  window._modalPhotos = [photo1, photo2].filter(Boolean);
+  const quick = currentRole === 'admin' ? `<div class="qa-wrap"><button class="a-btn qa-btn" onclick="toggleQuick(event)">⚡ Quick actions ▾</button>
+      <div class="qa-menu" hidden>
+        <button onclick="shareProfile('${uid}')">Share profile</button>
+        <button onclick="shareStatus('${uid}', document.querySelector('.qa-btn'))">Share details</button>
+        <button onclick="openEdit('${uid}')">✎ Edit</button>
+        <button class="danger" onclick="deleteProfile('${uid}')">🗑 Delete</button>
+      </div></div>` : '';
+
   document.getElementById('modal-body').innerHTML = `
     <div class="md-layout">
       <div class="md-banner">
@@ -405,7 +413,7 @@ async function openModal(uid) {
         <div class="md-resize-handle" id="md-resize-handle" title="Drag to resize"></div>
         <div class="md-right">
           ${detailSections}
-          <div class="md-horo-row">${horoBtn}</div>
+          <div class="md-horo-row"><div class="md-actions-row">${horoBtn}${quick}</div></div>
         </div>
       </div>
     </div>`;
@@ -468,12 +476,6 @@ async function openModal(uid) {
     leftCol.style.flexBasis = newWidth + 'px';
   }
 
-  if (currentRole === 'admin') {
-    document.getElementById('modal-body').insertAdjacentHTML('afterbegin',
-      `<div class="a-toolbar"><button class="a-btn a-primary" onclick="shareStatus('${uid}', this)">Share to Status</button>
-        <button class="a-btn" onclick="openEdit('${uid}')">✎ Edit</button>
-        <button class="a-btn a-danger-btn" onclick="deleteProfile('${uid}')">🗑 Delete</button></div>`);
-  }
 
   // Update prev/next nav button states based on position in filtered list
   const prevBtn = document.getElementById('modal-prev-btn');
@@ -481,11 +483,16 @@ async function openModal(uid) {
   if (prevBtn) prevBtn.style.visibility = _modalIndex > 0 ? 'visible' : 'hidden';
   if (nextBtn) nextBtn.style.visibility = (_modalIndex >= 0 && _modalIndex < filtered.length - 1) ? 'visible' : 'hidden';
 
+  if (!document.getElementById('modal-overlay').classList.contains('open')) {
+    try { history.pushState({ km: 1, v: _adminView, m: uid }, ''); } catch (e) {}
+  }
   document.getElementById('modal-overlay').classList.add('open');
 }
 
+function closeModalUI() { document.getElementById('modal-overlay').classList.remove('open'); }
 function closeModal() {
-  document.getElementById('modal-overlay').classList.remove('open');
+  const open = document.getElementById('modal-overlay').classList.contains('open');
+  if (open && history.state && history.state.m) history.back(); else closeModalUI();
 }
 
 function navigateModal(dir) {
@@ -745,6 +752,7 @@ function clearSession() {
 }
 
 function initApp() {
+  try { if (!history.state || !history.state.km) history.replaceState({ km: 1, v: 'profiles' }, ''); } catch (e) {}
   const lock = document.getElementById('login-screen');
   if (lock) lock.remove();
   document.body.classList.remove('locked');
@@ -1077,6 +1085,7 @@ function openLightbox(imgEl) {
   if (!_lbImages.length) { _lbImages = [imgEl.src]; _lbIndex = 0; }
 
   _lbShow();
+  _lbPush();
   document.getElementById('lightbox-overlay').classList.add('open');
   document.addEventListener('keydown', _lbKeyHandler);
 }
@@ -1096,17 +1105,29 @@ function lbPrev() { _lbIndex = (_lbIndex - 1 + _lbImages.length) % _lbImages.len
 function lbNext() { _lbIndex = (_lbIndex + 1) % _lbImages.length; _lbShow(); }
 
 function openLightboxFromSrc(src) {
-  _lbImages = [src.replace('sz=w600', 'sz=w1200')];
-  _lbIndex  = 0;
+  const idOf = u => (String(u).match(/[?&]id=([-\w]+)/) || [])[1];
+  const all = (window._modalPhotos || []).map(u => u.replace('sz=w600', 'sz=w1200'));
+  const i = all.findIndex(u => idOf(u) && idOf(u) === idOf(src));
+  if (all.length > 1 && i > -1) { _lbImages = all; _lbIndex = i; }
+  else { _lbImages = [src.replace('sz=w600', 'sz=w1200')]; _lbIndex = 0; }
   _lbShow();
+  _lbPush();
   document.getElementById('lightbox-overlay').classList.add('open');
   document.addEventListener('keydown', _lbKeyHandler);
 }
 
-function closeLightbox() {
+function closeLightboxUI() {
   const overlay = document.getElementById('lightbox-overlay');
   if (overlay) overlay.classList.remove('open');
   document.removeEventListener('keydown', _lbKeyHandler);
+}
+function closeLightbox() {
+  const open = document.getElementById('lightbox-overlay').classList.contains('open');
+  if (open && history.state && history.state.lb) history.back(); else closeLightboxUI();
+}
+function _lbPush() {
+  if (document.getElementById('lightbox-overlay').classList.contains('open')) return;
+  try { history.pushState({ km: 1, v: _adminView, m: (history.state && history.state.m) || null, lb: 1 }, ''); } catch (e) {}
 }
 
 function closeLightboxOnBg(e) {
@@ -1198,7 +1219,10 @@ let _adminView = 'profiles', _admin = null;
 
 let _adminAt = 0;
 
-function showView(v) {
+function showView(v, fromPop) {
+  if (!fromPop && !(history.state && history.state.v === v && !history.state.m && !history.state.lb)) {
+    try { history.pushState({ km: 1, v }, ''); } catch (e) {}
+  }
   _adminView = v;
   document.querySelectorAll('.nav-tab').forEach(b => {
     b.classList.toggle('active', b.dataset.view === v);
@@ -1371,18 +1395,23 @@ function renderSettings() {
   const keys = []; allProfiles.forEach(p => Object.keys(p).forEach(k => {
     if (k && k.trim() && keys.indexOf(k) === -1 && NOT_SELECTABLE.indexOf(k) === -1 && !k.startsWith('* I Her')) keys.push(k);
   }));
-  const list = (cls, chosen) => keys.map(k => `<label class="set-row"><input type="checkbox" class="${cls}" value="${escHtml(k)}"${chosen.indexOf(k) > -1 ? ' checked' : ''}> ${escHtml(fieldLabel(k))}</label>`).join('');
-  const row = (title, desc, cls, chosen, fn) => `
+  const STATUS_NO = ['Unique ID', 'Timestamp', 'Name', 'Photo 1 - of Bride or Groom', 'Photo 2 - of Bride or Groom', 'Horoscope',
+    'Payment Status', 'Paid Until', 'Status', 'Admin Notes'];
+  const statusKeys = []; allProfiles.forEach(p => Object.keys(p).forEach(k => {
+    if (k && k.trim() && statusKeys.indexOf(k) === -1 && STATUS_NO.indexOf(k) === -1 && !k.startsWith('* I Her')) statusKeys.push(k);
+  }));
+  const list = (cls, chosen, ks = keys) => ks.map(k => `<label class="set-row"><input type="checkbox" class="${cls}" value="${escHtml(k)}"${chosen.indexOf(k) > -1 ? ' checked' : ''}> ${escHtml(fieldLabel(k))}</label>`).join('');
+  const row = (title, desc, cls, chosen, fn, ks) => `
     <details class="set-acc">
       <summary><span class="sa-t">${title}</span><span class="sa-d">${desc}</span><span class="sa-n">${chosen.length} selected</span></summary>
-      <div class="sa-body"><div class="set-grid">${list(cls, chosen)}</div>
+      <div class="sa-body"><div class="set-grid">${list(cls, chosen, ks)}</div>
         <div class="a-actions"><button class="a-btn a-primary" onclick="${fn}(this)">Save</button></div></div>
     </details>`;
   return `<h2 class="a-title">Settings</h2>
     <div class="set-group">For users<small>Changes what every user sees</small></div>` +
     row('Profile cards', 'Details beside the photo, up to 12', 'set-card', cardFields, 'saveCardFields') +
     `<div class="set-group admin">Admin only<small>Only you can see these</small></div>` +
-    row('WhatsApp Status image', 'Details on the shared image, up to 12', 'set-status', statusFields, 'saveStatusFields') +
+    row('WhatsApp Status image', 'Any detail, including contacts, up to 14', 'set-status', statusFields, 'saveStatusFields', statusKeys) +
     `<details class="set-acc" ontoggle="if (this.open) loadDeleted()">
       <summary><span class="sa-t">Deleted profiles</span><span class="sa-d">Restore a profile deleted by mistake</span></summary>
       <div class="sa-body" id="deleted-box"></div></details>`;
@@ -1404,7 +1433,7 @@ async function saveCardFields(btn) {
 
 async function saveStatusFields(btn) {
   const fields = [...document.querySelectorAll('.set-status:checked')].map(i => i.value);
-  if (fields.length > 12) { alert('Choose up to 12 fields for the Status image.'); return; }
+  if (fields.length > 14) { alert('Choose up to 14 fields for the Status image.'); return; }
   btn.disabled = true; btn.textContent = 'Saving…';
   try {
     const r = await api('saveSettings', { token: sessionToken, fields, which: 'status' });
@@ -1429,11 +1458,11 @@ const EDIT_SECTIONS = {
   'Personal': ['Name', 'Date Of Birth', 'Time Of Birth', 'Place of Birth', 'Marital Status', 'Nakshatra', 'Charana', 'Rashi',
     'Gothra', 'Sub Caste', 'ಮಠ - Mata', 'Height (in feet) - example 5 / 5`2 / 5`11', 'Personal Habits', 'Language Preference'],
   'Professional': ['Education', 'Mention your degrees', 'Work Field', 'Currently Working-In(Company Name) and As(Position)', 'Salary(LPA)'],
-  'Family': ["Father's Name", "Father's Occupation", 'First contact', "Father's Native", "Mother's Name",
-    "Mother's Occupation", 'Second contact', "Mother's Native", 'Siblings'],
+  'Family': ["Father's Name", "Father's Occupation", "Father's Native", "Mother's Name",
+    "Mother's Occupation", "Mother's Native", 'Siblings'],
   'Preferences': ['Age Gap', 'Will agree on Same Gothra', 'Will agree on any Bhramins and Mata', 'Required Martial Status',
     'Abroad Relocation', 'Local Relocation', 'Planning To Relocate'],
-  'Location & Contact': ['Staying In', 'If currently not staying in Bengaluru Please mention the city', 'Address', 'Phone Number', 'Email Address'],
+  'Location & Contact': ['Staying In', 'If currently not staying in Bengaluru Please mention the city', 'Address', 'Phone Number', 'First contact', 'Second contact', 'Email Address'],
   'Admin': ['Payment Status', 'Paid Until', 'Status', 'Admin Notes'],
 };
 
@@ -1444,6 +1473,15 @@ function openEdit(uid) {
   const secs = Object.entries(EDIT_SECTIONS).map(([title, keys], si) => {
     const fields = keys.filter(k => k in p).map(k => {
       const id = 'dl' + (n++);
+      if (EDIT_CHOICES[k]) {
+        const cur = p[k] || '', list = cur && EDIT_CHOICES[k].indexOf(cur) === -1 ? [cur, ...EDIT_CHOICES[k]] : EDIT_CHOICES[k];
+        return `<label class="ed-f"><span>${escHtml(fieldLabel(k))}</span><select data-k="${escHtml(k)}" data-orig="${escHtml(cur)}">
+          ${cur ? '' : '<option value=""></option>'}${list.map(o => `<option${o === cur ? ' selected' : ''}>${escHtml(o)}</option>`).join('')}</select></label>`;
+      }
+      if (k === 'Paid Until') {
+        const iso = dmyToIso(p[k]);
+        return `<label class="ed-f"><span>Paid until</span><input type="date" data-k="${escHtml(k)}" data-orig="${iso}" value="${iso}"></label>`;
+      }
       const opts = [...new Set(allProfiles.map(x => x[k]).filter(Boolean))].slice(0, 60);
       return `<label class="ed-f"><span>${escHtml(fieldLabel(k))}</span>
         <input data-k="${escHtml(k)}" data-orig="${escHtml(p[k] || '')}" value="${escHtml(p[k] || '')}" list="${id}">
@@ -1465,8 +1503,9 @@ const closeEdit = () => document.getElementById('edit-panel')?.remove();
 
 async function saveEdit(uid, btn) {
   const changes = {};
-  document.querySelectorAll('#edit-panel input[data-k]').forEach(i => {
-    if (i.value !== i.dataset.orig) changes[i.dataset.k] = i.value.trim();
+  document.querySelectorAll('#edit-panel [data-k]').forEach(i => {
+    if (i.value === i.dataset.orig) return;
+    changes[i.dataset.k] = i.dataset.k === 'Paid Until' ? (i.value ? i.value.split('-').reverse().join('/') : '') : i.value.trim();
   });
   if (!Object.keys(changes).length) { closeEdit(); return; }
   btn.disabled = true; btn.textContent = 'Saving…';
@@ -1558,9 +1597,9 @@ function drawStatus(p, uid, photo) {
   g.fillStyle = '#fffaf4'; g.fillRect(0, 0, W, H);
 
   // chosen fields: long values wrap onto more lines; rows shrink a little if many are chosen
-  const fields = statusFields.filter(k => STATIC_KEYS.indexOf(k) === -1)
-    .map(k => ({ k, v: p[k] })).filter(f => f.v && f.v !== '—');
-  const TOP = 130, NAME_H = 175, FOOT = 120, GAP = 20, VALW = 600;
+  const fields = statusFields
+    .map(k => ({ k, v: k === 'Date Of Birth' ? formatDOB(p[k]) : p[k] })).filter(f => f.v && f.v !== '—');
+  const TOP = 130, NAME_H = 110, FOOT = 120, GAP = 20, VALW = 600;
   let rows = [], total = 0, sc = 1;
   for (const s of [1, 0.9, 0.8, 0.7]) {
     sc = s; g.font = `500 ${Math.round(40 * s)}px ${F}`;
@@ -1593,9 +1632,6 @@ function drawStatus(p, uid, photo) {
   const ageW = ageText ? g.measureText(ageText).width + 30 : 0;
   g.textAlign = 'left'; g.fillStyle = '#1a100a'; g.font = `700 60px ${F}`;
   g.fillText(fitText(g, p['Name'], W - 120 - ageW), 60, y + 50);
-  const meta = [formatDOB(p['Date Of Birth']), p['Gothra'], p[STATIC_KEYS[2]]].filter(v => v && v !== '—').join('   ·   ');
-  g.fillStyle = '#6b5440'; g.font = `500 38px ${F}`;
-  g.fillText(fitText(g, meta, W - 120), 60, y + 120);
   y += NAME_H;
 
   rows.forEach(r => {                                                        // chosen fields
@@ -1677,13 +1713,13 @@ const DETAIL_SECTIONS = {
   'Personal': ['Date Of Birth', 'Time Of Birth', 'Place of Birth', 'Marital Status', 'Nakshatra', 'Charana', 'Rashi',
     'Gothra', 'Sub Caste', 'ಮಠ - Mata', 'Height (in feet) - example 5 / 5`2 / 5`11', 'Personal Habits'],
   'Professional': ['Education', 'Mention your degrees', 'Work Field', 'Currently Working-In(Company Name) and As(Position)', 'Salary(LPA)'],
-  'Family': ["Father's Name", "Father's Occupation", 'First contact', "Father's Native", "Mother's Name",
-    "Mother's Occupation", 'Second contact', "Mother's Native", 'Siblings'],
+  'Family': ["Father's Name", "Father's Occupation", "Father's Native", "Mother's Name",
+    "Mother's Occupation", "Mother's Native", 'Siblings'],
   'Preferences': ['Age Gap', 'Will agree on Same Gothra', 'Will agree on any Bhramins and Mata', 'Required Martial Status',
     'Language Preference', 'Abroad Relocation', 'Local Relocation', 'Planning To Relocate',
     "If you have selected 'To Other Country', please mention the place"],
   'Location & Contact': ['Staying In', 'If currently not staying in Bengaluru Please mention the city',
-    "If you have selected 'Other Country', please mention the place", 'Address', 'Phone Number', 'Email Address'],
+    "If you have selected 'Other Country', please mention the place", 'Address', 'Phone Number', 'First contact', 'Second contact', 'Email Address'],
   'Admin': ['Payment Status', 'Paid Until', 'Status', 'Admin Notes'],
 };
 
@@ -1840,3 +1876,48 @@ async function restoreDeleted(row, uid, btn) {
     btn.disabled = false; btn.textContent = 'Restore';
   }
 }
+
+
+const EDIT_CHOICES = {
+  'Status': ['Active', 'On hold', 'In talks', 'Matched', 'Closed', 'Incomplete', 'Duplicate'],
+  'Payment Status': ['Registered', 'Paid'],
+};
+function dmyToIso(v) {
+  const m = String(v || '').match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/);
+  return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : '';
+}
+
+
+function toggleQuick(e) {
+  e.stopPropagation();
+  const btn = e.currentTarget, menu = btn.nextElementSibling, wasHidden = menu.hidden;
+  closeQuick();
+  if (!wasHidden) return;
+  menu.hidden = false;
+  const r = btn.getBoundingClientRect(), h = menu.offsetHeight, w = menu.offsetWidth;
+  menu.style.position = 'fixed';
+  menu.style.left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8)) + 'px';
+  menu.style.top = (r.bottom + h + 8 < window.innerHeight ? r.bottom + 4 : Math.max(8, r.top - h - 4)) + 'px';
+}
+function closeQuick() { document.querySelectorAll('.qa-menu').forEach(m => { m.hidden = true; }); }
+document.addEventListener('click', closeQuick);
+
+
+window.addEventListener('popstate', e => {
+  document.querySelectorAll('#edit-panel, #status-preview, #cmp-fields').forEach(x => x.remove());
+  document.getElementById('horo-lightbox')?.classList.remove('open');
+  const lb = document.getElementById('lightbox-overlay');
+  if (lb && lb.classList.contains('open')) { closeLightboxUI(); return; }
+  if (document.getElementById('modal-overlay').classList.contains('open')) { closeModalUI(); return; }
+  if (e.state && e.state.v && currentRole === 'admin') showView(e.state.v, true);
+});
+
+(function lightboxSwipe() {
+  let sx = 0; const ov = document.getElementById('lightbox-overlay');
+  ov.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true });
+  ov.addEventListener('touchend', e => {
+    if (_lbImages.length < 2) return;
+    const dx = e.changedTouches[0].clientX - sx;
+    if (Math.abs(dx) > 50) (dx < 0 ? lbNext : lbPrev)();
+  }, { passive: true });
+})();
