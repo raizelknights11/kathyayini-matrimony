@@ -653,6 +653,7 @@ async function loadData() {
     }
     currentRole = res.role;
     myProfiles  = res.myProfiles || [];
+    myProfiles.forEach(m => { if (m.row) tidyCase(m.row); });
     if (Array.isArray(res.cardFields)) cardFields = res.cardFields;
     if (Array.isArray(res.statusFields)) statusFields = res.statusFields;
     try { localStorage.setItem('km_role', res.role); } catch (e) {}
@@ -766,10 +767,12 @@ function initApp() {
       <span class="logout-sep">·</span>
       <span class="logout-action">Sign Out</span>`;
   }
-  if (currentRole === 'admin') {
-    document.getElementById('bottom-nav').style.display = 'flex';
-    document.body.classList.add('has-nav');
-  }
+  const nav = document.getElementById('bottom-nav');
+  nav.style.display = 'flex';
+  document.body.classList.add('has-nav');
+  nav.querySelectorAll('.nav-tab').forEach(t => {
+    t.hidden = (currentRole === 'admin' && t.classList.contains('member-only')) || (currentRole !== 'admin' && t.classList.contains('admin-only'));
+  });
   loadData();
 }
 
@@ -1234,7 +1237,7 @@ function showView(v, fromPop) {
   window.scrollTo(0, 0);
   if (onProfiles) return;
   document.getElementById('admin-view').classList.toggle('wide', v === 'compare');
-  if (v === 'settings' || v === 'compare') { renderAdminView(); if (v === 'compare') cmpInit(); return; }
+  if (v === 'settings' || v === 'compare' || v === 'myprofile') { renderAdminView(); if (v === 'compare') cmpInit(); return; }
   if (_admin) renderAdminView();                              // instant, from memory
   if (!_admin || Date.now() - _adminAt > 20000) loadAdminData(); // refresh quietly
 }
@@ -1256,7 +1259,8 @@ async function loadAdminData() {
 function renderAdminView() {
   const box = document.getElementById('admin-view');
   box.innerHTML = _adminView === 'interests' ? renderInterests()
-                : _adminView === 'settings'  ? renderSettings()
+                : _adminView === 'settings'  ? (currentRole === 'admin' ? renderSettings() : renderMemberSettings())
+                : _adminView === 'myprofile' ? renderMyProfile()
                 : _adminView === 'compare'   ? renderCompare() : renderPayments();
 }
 
@@ -1412,6 +1416,9 @@ function renderSettings() {
     row('Profile cards', 'Details beside the photo, up to 12', 'set-card', cardFields, 'saveCardFields') +
     `<div class="set-group admin">Admin only<small>Only you can see these</small></div>` +
     row('WhatsApp Status image', 'Any detail, including contacts, up to 14', 'set-status', statusFields, 'saveStatusFields', statusKeys) +
+    `<details class="set-acc" ontoggle="if (this.open) loadDelReq()">
+      <summary><span class="sa-t">Deletion requests</span><span class="sa-d">Members asking to delete their profile</span></summary>
+      <div class="sa-body" id="delreq-box"></div></details>` +
     `<details class="set-acc" ontoggle="if (this.open) loadDeleted()">
       <summary><span class="sa-t">Deleted profiles</span><span class="sa-d">Restore a profile deleted by mistake</span></summary>
       <div class="sa-body" id="deleted-box"></div></details>`;
@@ -1466,12 +1473,13 @@ const EDIT_SECTIONS = {
   'Admin': ['Payment Status', 'Paid Until', 'Status', 'Admin Notes'],
 };
 
-function openEdit(uid) {
-  const p = allProfiles.find(x => x['Unique ID'] === uid);
+function openEdit(uid, own) {
+  const p = own ? (myProfiles.find(m => m.uid === uid) || {}).row : allProfiles.find(x => x['Unique ID'] === uid);
   if (!p) return;
   let n = 0;
   const secs = Object.entries(EDIT_SECTIONS).map(([title, keys], si) => {
-    const fields = keys.filter(k => k in p).map(k => {
+    if (own && title === 'Admin') return '';
+    const fields = keys.filter(k => k in p && !(own && OWN_LOCKED.indexOf(k) > -1)).map(k => {
       const id = 'dl' + (n++);
       if (EDIT_CHOICES[k]) {
         const cur = p[k] || '', list = cur && EDIT_CHOICES[k].indexOf(cur) === -1 ? [cur, ...EDIT_CHOICES[k]] : EDIT_CHOICES[k];
@@ -1493,7 +1501,7 @@ function openEdit(uid) {
   el.id = 'edit-panel'; el.className = 'edit-panel';
   el.innerHTML = `<div class="ed-box"><div class="ed-head"><strong>Edit ${escHtml(p['Name'])}</strong>
     <button class="a-btn" onclick="closeEdit()">✕</button></div><div class="ed-body">${secs}</div>
-    <div class="ed-foot"><button class="a-btn a-primary" onclick="saveEdit('${escHtml(uid)}',this)">Save changes</button></div></div>`;
+    <div class="ed-foot"><button class="a-btn a-primary" onclick="saveEdit('${escHtml(uid)}',this,${!!own})">Save changes</button></div></div>`;
   document.body.appendChild(el);
   el.querySelectorAll('.ed-sec').forEach(d => d.addEventListener('toggle', () => {
     if (d.open) el.querySelectorAll('.ed-sec').forEach(o => { if (o !== d) o.open = false; });
@@ -1501,7 +1509,7 @@ function openEdit(uid) {
 }
 const closeEdit = () => document.getElementById('edit-panel')?.remove();
 
-async function saveEdit(uid, btn) {
+async function saveEdit(uid, btn, own) {
   const changes = {};
   document.querySelectorAll('#edit-panel [data-k]').forEach(i => {
     if (i.value === i.dataset.orig) return;
@@ -1510,8 +1518,13 @@ async function saveEdit(uid, btn) {
   if (!Object.keys(changes).length) { closeEdit(); return; }
   btn.disabled = true; btn.textContent = 'Saving…';
   try {
-    const r = await api('updateProfile', { token: sessionToken, uid, changes });
+    const r = await api(own ? 'updateMyProfile' : 'updateProfile', { token: sessionToken, uid, changes });
     if (!r.ok) throw new Error(r.error);
+    if (own) {
+      Object.assign(myProfiles.find(m => m.uid === uid).row, changes);
+      closeEdit(); renderAdminView();
+      return;
+    }
     const p = allProfiles.find(x => x['Unique ID'] === uid);
     Object.assign(p, changes);
     delete _cardCache[uid];
@@ -1921,3 +1934,114 @@ window.addEventListener('popstate', e => {
     if (Math.abs(dx) > 50) (dx < 0 ? lbNext : lbPrev)();
   }, { passive: true });
 })();
+
+
+// =====================================================================
+// MEMBERS: MY PROFILE + SETTINGS
+// =====================================================================
+const OWN_LOCKED = ['Unique ID', 'Timestamp', 'Email Address', 'Filling the Form Of', 'Photo 1 - of Bride or Groom',
+  'Photo 2 - of Bride or Groom', 'Horoscope', 'Admin Notes', 'Payment Status', 'Paid Until', 'Status'];
+
+function renderMyProfile() {
+  if (!myProfiles.length) return '<h2 class="a-title">My profile</h2><div class="a-empty">We could not find a profile for your email.</div>';
+  return '<h2 class="a-title">My profile</h2>' + myProfiles.map(m => {
+    const p = m.row || {};
+    const photos = ['Photo 1 - of Bride or Groom', 'Photo 2 - of Bride or Groom'].map(k => driveThumbUrl(p[k], 'w400')).filter(Boolean);
+    let first = true;
+    const secs = Object.entries(DETAIL_SECTIONS).filter(([t]) => t !== 'Admin').map(([t, keys]) => {
+      const rows = keys.filter(k => p[k] && String(p[k]).trim()).map(k => `<div class="md-row${String(p[k]).length > 38 ? ' wide' : ''}">
+        <div class="md-key">${escHtml(fieldLabel(k))}</div><div class="md-val">${escHtml(k === 'Date Of Birth' ? formatDOB(p[k]) : p[k])}</div></div>`).join('');
+      if (!rows) return '';
+      const open = first ? ' open' : ''; first = false;
+      return `<details class="md-sec"${open}><summary class="md-sec-title">${t}</summary><div class="md-grid">${rows}</div></details>`;
+    }).join('');
+    return `<div class="a-card"><div class="a-row"><strong>${escHtml(p['Name'] || m.name)}</strong><span class="a-date">${escHtml(m.uid)}</span></div>
+      ${photos.length ? `<div class="mp-photos">${photos.map(u => `<img src="${u}" alt="">`).join('')}</div>` : ''}
+      <div class="a-actions"><button class="a-btn a-primary" onclick="openEdit('${escHtml(m.uid)}', true)">✎ Edit my profile</button></div>
+      ${secs}
+      <div class="a-sub">To change photos or the horoscope, <a href="https://wa.me/${WA_NUMBER}" target="_blank" rel="noopener">message us on WhatsApp</a>.</div></div>`;
+  }).join('');
+}
+
+function renderMemberSettings() {
+  const keys = []; const add = o => Object.keys(o || {}).forEach(k => {
+    if (k && k.trim() && keys.indexOf(k) === -1 && NOT_SELECTABLE.indexOf(k) === -1 && !k.startsWith('* I Her')) keys.push(k);
+  });
+  allProfiles.forEach(add); myProfiles.forEach(m => add(m.row));
+  const pay = m => {
+    const paid = String(m.payment).trim().toLowerCase() === 'paid';
+    return `<div class="a-card"><div class="a-row"><strong>${escHtml(m.name)}</strong><span class="a-date">${escHtml(m.uid)}</span></div>
+      <div class="a-sub"><span class="pay-badge ${paid ? 'ok' : 'wait'}">${paid ? 'Paid' : 'Payment pending'}</span>
+      ${paid && m.until ? ' valid until ' + escHtml(m.until) : ''}${paid ? '' : ' · <a href="https://wa.me/' + WA_NUMBER + '" target="_blank" rel="noopener">Contact us</a>'}</div></div>`;
+  };
+  const del = m => `<div class="a-card"><div class="a-row"><strong>${escHtml(m.name)}</strong><span class="a-date">${escHtml(m.uid)}</span></div>
+    ${m.deletion === 'Pending'
+      ? '<div class="a-sub">Deletion requested. Waiting for the admin to approve.</div>'
+      : `<div class="a-sub">The admin has to approve before your profile is removed.</div>
+         <div class="a-actions"><button class="a-btn a-danger-btn" onclick="requestDeletionClient('${escHtml(m.uid)}', this)">Request deletion</button></div>`}</div>`;
+  return `<h2 class="a-title">Settings</h2>
+    <details class="set-acc" open><summary><span class="sa-t">Membership</span><span class="sa-d">Your payment status</span></summary>
+      <div class="sa-body">${myProfiles.map(pay).join('') || '<div class="a-empty">No profile found.</div>'}</div></details>
+    <details class="set-acc"><summary><span class="sa-t">Profile cards</span><span class="sa-d">Details shown on the cards, up to 12</span><span class="sa-n">${cardFields.length} selected</span></summary>
+      <div class="sa-body"><div class="set-grid">${keys.map(k => `<label class="set-row"><input type="checkbox" class="set-card" value="${escHtml(k)}"${cardFields.indexOf(k) > -1 ? ' checked' : ''}> ${escHtml(fieldLabel(k))}</label>`).join('')}</div>
+        <div class="a-actions"><button class="a-btn a-primary" onclick="saveMyCardFields(this, false)">Save</button>
+        <button class="a-btn" onclick="saveMyCardFields(this, true)">Reset to default</button></div></div></details>
+    <details class="set-acc"><summary><span class="sa-t">Delete my profile</span><span class="sa-d">Needs the admin's approval</span></summary>
+      <div class="sa-body">${myProfiles.map(del).join('') || '<div class="a-empty">No profile found.</div>'}</div></details>`;
+}
+
+async function saveMyCardFields(btn, reset) {
+  const fields = reset ? [] : [...document.querySelectorAll('.set-card:checked')].map(i => i.value);
+  if (!reset && fields.length > 12) { alert('Choose up to 12 fields.'); return; }
+  btn.disabled = true;
+  try {
+    const r = await api('saveMySettings', { token: sessionToken, fields });
+    if (!r.ok) throw new Error(r.error);
+    cardFields = r.cardFields;
+    Object.keys(_cardCache).forEach(k => delete _cardCache[k]);
+    applyFilters();
+    renderAdminView();
+    alert(reset ? 'Back to the default details.' : 'Saved. Your cards will show these details.');
+  } catch (e) { alert('Could not save: ' + (e.message || 'try again')); }
+  btn.disabled = false;
+}
+
+async function requestDeletionClient(uid, btn) {
+  if (!confirm('Ask the admin to delete this profile? It is removed only after they approve.')) return;
+  btn.disabled = true;
+  try {
+    const r = await api('requestDeletion', { token: sessionToken, uid });
+    if (!r.ok) throw new Error(r.error);
+    myProfiles.find(m => m.uid === uid).deletion = 'Pending';
+    renderAdminView();
+    alert('Request sent. The admin will review it.');
+  } catch (e) { alert('Could not send: ' + (e.message || 'try again')); btn.disabled = false; }
+}
+
+// ---- Admin: deletion requests ----
+async function loadDelReq() {
+  const box = document.getElementById('delreq-box');
+  if (!box) return;
+  box.innerHTML = '<div class="a-empty">Loading…</div>';
+  try {
+    const r = await api('deletionRequests', { token: sessionToken });
+    if (!r.ok) throw new Error(r.error);
+    box.innerHTML = r.items.length ? r.items.map(i => `<div class="a-card">
+      <div class="a-row"><strong>${escHtml(i.name)}</strong><span class="a-date">${escHtml(i.on)}</span></div>
+      <div class="a-sub">${escHtml(i.uid)} · ${escHtml(i.email)}</div>
+      <div class="a-actions"><button class="a-btn a-danger-btn" onclick="decideDel(${i.row}, '${escHtml(i.uid)}', true, this)">Approve and delete</button>
+        <button class="a-btn" onclick="decideDel(${i.row}, '${escHtml(i.uid)}', false, this)">Reject</button></div></div>`).join('')
+      : '<div class="a-empty">No pending requests.</div>';
+  } catch (e) { box.innerHTML = `<div class="a-empty">Could not load: ${escHtml(e.message || 'try again')}</div>`; }
+}
+
+async function decideDel(row, uid, approve, btn) {
+  if (!confirm(approve ? `Delete ${uid}? A copy stays in "Deleted Profiles" so you can restore it.` : `Reject the request for ${uid}?`)) return;
+  btn.disabled = true;
+  try {
+    const r = await api('decideDeletion', { token: sessionToken, row, uid, approve });
+    if (!r.ok) throw new Error(r.error);
+    await loadDelReq();
+    if (approve) await loadData();
+  } catch (e) { alert('Could not save: ' + (e.message || 'try again')); btn.disabled = false; }
+}
