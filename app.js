@@ -14,8 +14,9 @@ const HIDDEN_FOR_GUEST = [
   'Phone Number',
   'Address',
   'Email Address',
-  "Father's Phone Number",
-  "Mother's Phone Number",
+  'First contact',
+  'Second contact',
+  'Parents Phone Number',
 ];
 
 // =====================================================================
@@ -1199,7 +1200,10 @@ let _adminAt = 0;
 
 function showView(v) {
   _adminView = v;
-  document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  document.querySelectorAll('.nav-tab').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === v);
+    b.setAttribute('aria-current', b.dataset.view === v ? 'page' : 'false');
+  });
   const onProfiles = v === 'profiles';
   ['controls-bar', 'grid'].forEach(id => document.getElementById(id).style.display = onProfiles ? '' : 'none');
   document.getElementById('admin-view').style.display = onProfiles ? 'none' : 'block';
@@ -1361,7 +1365,7 @@ function staticHtml(p) {
 
 const NOT_SELECTABLE = ['Unique ID', 'Timestamp', 'Name', 'Photo 1 - of Bride or Groom', 'Photo 2 - of Bride or Groom',
   'Horoscope', 'Payment Status', 'Paid Until', 'Status', 'Admin Notes', 'Email Address', 'Phone Number', 'Address',
-  "Father's Phone Number", "Mother's Phone Number", ...STATIC_KEYS];
+  'First contact', 'Second contact', ...STATIC_KEYS];
 
 function renderSettings() {
   const keys = []; allProfiles.forEach(p => Object.keys(p).forEach(k => {
@@ -1425,8 +1429,8 @@ const EDIT_SECTIONS = {
   'Personal': ['Name', 'Date Of Birth', 'Time Of Birth', 'Place of Birth', 'Marital Status', 'Nakshatra', 'Charana', 'Rashi',
     'Gothra', 'Sub Caste', 'ಮಠ - Mata', 'Height (in feet) - example 5 / 5`2 / 5`11', 'Personal Habits', 'Language Preference'],
   'Professional': ['Education', 'Mention your degrees', 'Work Field', 'Currently Working-In(Company Name) and As(Position)', 'Salary(LPA)'],
-  'Family': ["Father's Name", "Father's Occupation", "Father's Phone Number", "Father's Native", "Mother's Name",
-    "Mother's Occupation", "Mother's Phone Number", "Mother's Native", 'Siblings'],
+  'Family': ["Father's Name", "Father's Occupation", 'First contact', "Father's Native", "Mother's Name",
+    "Mother's Occupation", 'Second contact', "Mother's Native", 'Siblings'],
   'Preferences': ['Age Gap', 'Will agree on Same Gothra', 'Will agree on any Bhramins and Mata', 'Required Martial Status',
     'Abroad Relocation', 'Local Relocation', 'Planning To Relocate'],
   'Location & Contact': ['Staying In', 'If currently not staying in Bengaluru Please mention the city', 'Address', 'Phone Number', 'Email Address'],
@@ -1673,8 +1677,8 @@ const DETAIL_SECTIONS = {
   'Personal': ['Date Of Birth', 'Time Of Birth', 'Place of Birth', 'Marital Status', 'Nakshatra', 'Charana', 'Rashi',
     'Gothra', 'Sub Caste', 'ಮಠ - Mata', 'Height (in feet) - example 5 / 5`2 / 5`11', 'Personal Habits'],
   'Professional': ['Education', 'Mention your degrees', 'Work Field', 'Currently Working-In(Company Name) and As(Position)', 'Salary(LPA)'],
-  'Family': ["Father's Name", "Father's Occupation", "Father's Phone Number", "Father's Native", "Mother's Name",
-    "Mother's Occupation", "Mother's Phone Number", "Mother's Native", 'Siblings'],
+  'Family': ["Father's Name", "Father's Occupation", 'First contact', "Father's Native", "Mother's Name",
+    "Mother's Occupation", 'Second contact', "Mother's Native", 'Siblings'],
   'Preferences': ['Age Gap', 'Will agree on Same Gothra', 'Will agree on any Bhramins and Mata', 'Required Martial Status',
     'Language Preference', 'Abroad Relocation', 'Local Relocation', 'Planning To Relocate',
     "If you have selected 'To Other Country', please mention the place"],
@@ -1707,18 +1711,19 @@ async function pickStatusPhoto(uid, n) {
 // =====================================================================
 // ADMIN: COMPARE — brides on the left, grooms on the right
 // =====================================================================
-const CMP_ROWS = [['Date Of Birth', 'Date Of Birth'], ['Nakshatra', 'Nakshatra'], ['Rashi', 'Rashi'], ['Gothra', 'Gothra'],
-  ['Sub Caste', 'Sub Caste'], ['Height', STATIC_KEYS[2]], ['Education', 'Education'], ['Work Field', 'Work Field'],
-  ['Company & Role', 'Currently Working-In(Company Name) and As(Position)'], ['Marital Status', 'Marital Status'],
-  ['Location', 'Staying In'], ['Age gap wanted', 'Age Gap']];
+const CMP_DEFAULT = ['Date Of Birth', 'Nakshatra', 'Rashi', 'Gothra', 'Sub Caste', STATIC_KEYS[2], 'Education', 'Work Field',
+  'Currently Working-In(Company Name) and As(Position)', 'Marital Status', 'Staying In', 'Age Gap'];
+let cmpFields = (() => { try { const v = JSON.parse(localStorage.getItem('km_cmp_fields') || 'null'); return Array.isArray(v) && v.length ? v : CMP_DEFAULT; } catch (e) { return CMP_DEFAULT; } })();
 let _cmp = { Bride: null, Groom: null };
 
 function renderCompare() {
   const uniq = (type, k) => [...new Set(allProfiles.filter(p => p['Filling the Form Of'] === type).map(p => p[k]).filter(Boolean))].sort();
+  const sel = (id, type, label, k) => `<select class="filter-btn" id="${id}-${type}" onchange="cmpList('${type}')"><option value="">${label}</option>${uniq(type, k).map(v => `<option>${escHtml(v)}</option>`).join('')}</select>`;
   const col = (type, title) => `<div class="cmp-col"><div class="cmp-h ${type.toLowerCase()}">${title}</div>
-    <input class="filter-btn" id="cmp-q-${type}" placeholder="Search name, gothra, star…" oninput="cmpList('${type}')">
-    <select class="filter-btn" id="cmp-c-${type}" onchange="cmpList('${type}')"><option value="">All sub-castes</option>${uniq(type, 'Sub Caste').map(v => `<option>${escHtml(v)}</option>`).join('')}</select>
-    <select class="filter-btn" id="cmp-l-${type}" onchange="cmpList('${type}')"><option value="">All locations</option>${uniq(type, 'Staying In').map(v => `<option>${escHtml(v)}</option>`).join('')}</select>
+    <input class="filter-btn cmp-search" id="cmp-q-${type}" placeholder="Search name, gothra, star…" oninput="cmpList('${type}')">
+    <div class="cmp-filters">${sel('cmp-c', type, 'All sub-castes', 'Sub Caste')}${sel('cmp-l', type, 'All locations', 'Staying In')}
+      ${sel('cmp-m', type, 'Any marital status', 'Marital Status')}
+      <select class="filter-btn" id="cmp-s-${type}" onchange="cmpList('${type}')"><option value="young">Youngest first</option><option value="old">Oldest first</option></select></div>
     <div class="cmp-list" id="cmp-list-${type}"></div></div>`;
   return `<h2 class="a-title">Compare</h2><div class="cmp-cols">${col('Bride', 'Brides')}${col('Groom', 'Grooms')}</div><div id="cmp-result"></div>`;
 }
@@ -1726,10 +1731,12 @@ function renderCompare() {
 function cmpInit() { _cmp = { Bride: null, Groom: null }; cmpList('Bride'); cmpList('Groom'); }
 
 function cmpList(type) {
-  const q = document.getElementById('cmp-q-' + type).value.trim().toLowerCase();
-  const c = document.getElementById('cmp-c-' + type).value, l = document.getElementById('cmp-l-' + type).value;
+  const v = id => document.getElementById(id + '-' + type).value;
+  const q = v('cmp-q').trim().toLowerCase(), c = v('cmp-c'), l = v('cmp-l'), m = v('cmp-m'), old = v('cmp-s') === 'old';
+  const t = p => { const d = parseDOB(p['Date Of Birth']); return d ? d.getTime() : null; };
   const list = allProfiles.filter(p => p['Filling the Form Of'] === type && (!c || p['Sub Caste'] === c) && (!l || p['Staying In'] === l) &&
-    (!q || [p['Name'], p['Gothra'], p['Nakshatra'], p['Unique ID']].join(' ').toLowerCase().includes(q)));
+    (!m || p['Marital Status'] === m) && (!q || [p['Name'], p['Gothra'], p['Nakshatra'], p['Unique ID']].join(' ').toLowerCase().includes(q)))
+    .sort((a, b) => { const x = t(a), y = t(b); if (x === null) return 1; if (y === null) return -1; return old ? x - y : y - x; });
   document.getElementById('cmp-list-' + type).innerHTML = list.map(p => {
     const age = getAge(p['Date Of Birth']);
     return `<button class="cmp-item${_cmp[type] === p['Unique ID'] ? ' sel' : ''}" onclick="cmpPick('${type}','${escHtml(p['Unique ID'])}')">
@@ -1740,25 +1747,57 @@ function cmpList(type) {
 function cmpPick(type, uid) {
   _cmp[type] = _cmp[type] === uid ? null : uid;
   cmpList(type);
+  cmpResult();
+}
+
+function cmpResult() {
   const b = allProfiles.find(p => p['Unique ID'] === _cmp.Bride), g = allProfiles.find(p => p['Unique ID'] === _cmp.Groom);
   const box = document.getElementById('cmp-result');
   if (!b || !g) { box.innerHTML = ''; return; }
-  const val = (p, label, k) => label === 'Date Of Birth' ? formatDOB(p[k]) : (p[k] || '—');
-  const rows = CMP_ROWS.map(([label, k]) => {
-    const vb = val(b, label, k), vg = val(g, label, k);
-    const same = vb !== '—' && vb.toLowerCase() === vg.toLowerCase();
-    return `<tr${same && label === 'Gothra' ? ' class="warn"' : ''}><th>${label}</th><td>${escHtml(vb)}</td><td>${escHtml(vg)}</td></tr>`;
-  }).join('');
+  const get = (p, k) => (k === 'Date Of Birth' ? formatDOB(p[k]) : p[k]) || '—';
+  const norm = (p, k) => String(p[k] || '').trim().toLowerCase();
+  // highlighted when the same: gothra, nakshatra, height — or when marital status differs
+  const RULES = { 'Gothra': 'same', 'Nakshatra': 'same', [STATIC_KEYS[2]]: 'same', 'Marital Status': 'differ' };
+  const hit = k => { const x = norm(b, k), y = norm(g, k); return RULES[k] === 'same' ? !!x && x === y : RULES[k] === 'differ' ? !!x && !!y && x !== y : false; };
+  const rows = cmpFields.map(k => `<tr${hit(k) ? ' class="warn"' : ''}><th>${escHtml(fieldLabel(k))}</th><td>${escHtml(get(b, k))}</td><td>${escHtml(get(g, k))}</td></tr>`).join('');
+  const photo = p => { const u = driveThumbUrl(p['Photo 1 - of Bride or Groom'], 'w500'); return u ? `<img class="cmp-photo" src="${u}" alt="${escHtml(p['Name'])}">` : '<div class="cmp-photo none">No photo</div>'; };
   const ab = getAge(b['Date Of Birth']), ag = getAge(g['Date Of Birth']);
   const gap = ab !== '—' && ag !== '—' ? parseInt(ag, 10) - parseInt(ab, 10) : null;
   const notes = [];
-  if ((b['Gothra'] || '').toLowerCase() && (b['Gothra'] || '').toLowerCase() === (g['Gothra'] || '').toLowerCase()) notes.push('Same gothra');
-  if (gap !== null) notes.push(gap === 0 ? 'Same age' : `Groom is ${Math.abs(gap)} year${Math.abs(gap) > 1 ? 's' : ''} ${gap > 0 ? 'older' : 'younger'}`);
-  box.innerHTML = `<div class="a-card"><table class="cmp-table"><tr><th></th><th class="bride">${escHtml(b['Name'])}<small>${ab !== '—' ? ab : ''}</small></th>
-    <th class="groom">${escHtml(g['Name'])}<small>${ag !== '—' ? ag : ''}</small></th></tr>${rows}</table>
-    ${notes.length ? `<div class="cmp-notes">${notes.map(n => `<span class="${n === 'Same gothra' ? 'bad' : ''}">${n}</span>`).join('')}</div>` : ''}
+  if (hit('Gothra')) notes.push(['Same gothra', 1]);
+  if (hit('Nakshatra')) notes.push(['Same nakshatra', 1]);
+  if (hit(STATIC_KEYS[2])) notes.push(['Same height', 1]);
+  if (hit('Marital Status')) notes.push(['Different marital status', 1]);
+  if (gap !== null) notes.push([gap === 0 ? 'Same age' : `Groom is ${Math.abs(gap)} year${Math.abs(gap) > 1 ? 's' : ''} ${gap > 0 ? 'older' : 'younger'}`, 0]);
+  box.innerHTML = `<div class="a-card"><table class="cmp-table">
+    <tr><th></th><th class="bride">${escHtml(b['Name'])}<small>${ab !== '—' ? ab : ''}</small></th><th class="groom">${escHtml(g['Name'])}<small>${ag !== '—' ? ag : ''}</small></th></tr>
+    <tr class="cmp-photos"><th></th><td>${photo(b)}</td><td>${photo(g)}</td></tr>${rows}</table>
+    <div class="cmp-notes">${notes.map(([n, bad]) => `<span class="${bad ? 'bad' : ''}">${n}</span>`).join('')}</div>
     <div class="a-actions"><button class="a-btn" onclick="openModal('${escHtml(b['Unique ID'])}')">Open bride</button>
-      <button class="a-btn" onclick="openModal('${escHtml(g['Unique ID'])}')">Open groom</button></div></div>`;
+      <button class="a-btn" onclick="openModal('${escHtml(g['Unique ID'])}')">Open groom</button>
+      <button class="a-btn cmp-fields-btn" onclick="openCmpFields()">⚙ Fields</button></div></div>`;
+}
+
+function openCmpFields() {
+  const keys = []; allProfiles.forEach(p => Object.keys(p).forEach(k => {
+    if (k && k.trim() && keys.indexOf(k) === -1 && (STATIC_KEYS.indexOf(k) > -1 || NOT_SELECTABLE.indexOf(k) === -1) && !k.startsWith('* I Her')) keys.push(k);
+  }));
+  const el = document.createElement('div');
+  el.id = 'cmp-fields'; el.className = 'edit-panel';
+  el.innerHTML = `<div class="ed-box"><div class="ed-head"><strong>Fields to compare</strong><button class="a-btn" onclick="document.getElementById('cmp-fields').remove()">✕</button></div>
+    <div class="ed-body"><div class="set-grid">${keys.map(k => `<label class="set-row"><input type="checkbox" class="cmp-fc" value="${escHtml(k)}"${cmpFields.indexOf(k) > -1 ? ' checked' : ''}> ${escHtml(fieldLabel(k))}</label>`).join('')}</div></div>
+    <div class="ed-foot"><button class="a-btn a-primary" onclick="saveCmpFields()">Done</button></div></div>`;
+  document.body.appendChild(el);
+}
+
+function saveCmpFields() {
+  const picked = [...document.querySelectorAll('.cmp-fc:checked')].map(i => i.value);
+  if (picked.length) {
+    cmpFields = picked;
+    try { localStorage.setItem('km_cmp_fields', JSON.stringify(picked)); } catch (e) {}
+  }
+  document.getElementById('cmp-fields')?.remove();
+  cmpResult();
 }
 
 
